@@ -1,0 +1,1 @@
+""" Curses terminal digital clock"""
