@@ -1,6 +1,7 @@
 """ Curses terminal digital clock"""
 import curses
-from time import sleep
+import time
+from datetime import datetime
 
 
 class SmSeg:
@@ -11,8 +12,7 @@ class SmSeg:
     seg5 = (2, 0), (3, 0), (4, 0)
     seg6 = (0, 0), (1, 0), (2, 0)
     seg7 = (2, 0), (2, 1), (2, 2)
-    colon1 = (1, 4), (3, 4)
-    offset = 6
+    colon = (1, 4), (3, 4)
 
 
 class MedSeg:
@@ -23,7 +23,7 @@ class MedSeg:
     seg5 = (3, 0), (4, 0), (5, 0), (6, 0)
     seg6 = (0, 0), (1, 0), (2, 0), (3, 0)
     seg7 = (3, 0), (3, 1), (3, 2), (3, 3)
-    offset = 8
+    colon = (2, 5), (4, 5)
 
 
 class LrgSeg:
@@ -48,9 +48,10 @@ class LrgSeg:
     seg7 = (8, 0), (8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (8, 7), \
            (8, 8), (8, 9), (9, 0), (9, 1), (9, 2), (9, 3), (9, 4), (9, 5), \
            (9, 6), (9, 7), (9, 8), (9, 9)
+    colon = (5, 12), (12, 12)
 
 
-def get_segments(number: int, size: str) -> tuple:
+def get_segments(number: str, size: str) -> tuple:
     if size == "small":
         seg = SmSeg
     elif size == "medium":
@@ -59,34 +60,68 @@ def get_segments(number: int, size: str) -> tuple:
         seg = LrgSeg()
     else:
         seg = SmSeg
-    if number == 0:
+    if number == "0":
         return seg.seg1 + seg.seg2 + seg.seg3 + seg.seg4 + seg.seg5 + seg.seg6
-    elif number == 1:
+    elif number == "1":
         return seg.seg2 + seg.seg3
-    elif number == 2:
+    elif number == "2":
         return seg.seg1 + seg.seg2 + seg.seg7 + seg.seg5 + seg.seg4
-    elif number == 3:
+    elif number == "3":
         return seg.seg1 + seg.seg2 + seg.seg7 + seg.seg3 + seg.seg4
-    elif number == 4:
+    elif number == "4":
         return seg.seg6 + seg.seg7 + seg.seg2 + seg.seg3
-    elif number == 5:
+    elif number == "5":
         return seg.seg1 + seg.seg6 + seg.seg7 + seg.seg3 + seg.seg4
-    elif number == 6:
+    elif number == "6":
         return seg.seg6 + seg.seg5 + seg.seg4 + seg.seg3 + seg.seg7
-    elif number == 7:
+    elif number == "7":
         return seg.seg1 + seg.seg2 + seg.seg3
-    elif number == 8:
+    elif number == "8":
         return seg.seg1 + seg.seg2 + seg.seg3 + seg.seg4 + seg.seg5 + \
                seg.seg6 + seg.seg7
-    elif number == 9:
+    elif number == "9":
         return seg.seg1 + seg.seg2 + seg.seg3 + seg.seg4 + seg.seg6 + seg.seg7
+    elif number == ":":
+        return seg.colon
 
 
-def display(screen, number: int) -> None:
-    segment_list = get_segments(number, "large")
-    for seg in segment_list:
-        screen.addstr(seg[0], seg[1], " ", curses.color_pair(1))
-        screen.addstr(seg[0], seg[1] + 14, " ", curses.color_pair(2))
+def get_offset(size: str) -> int:
+    if size == "small":
+        return 5
+    elif size == "medium":
+        return 6
+    elif size == "large":
+        return 14
+
+
+def display(screen, time_string: str, size: str) -> None:
+    time_segments = []
+    for digit in time_string:
+        time_segments.append(get_segments(digit, size))
+    offset = 0
+
+    for seg in time_segments[0]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size)
+    for seg in time_segments[1]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    for seg in get_segments(":", size):
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size) + 1
+    for seg in time_segments[2]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size)
+    for seg in time_segments[3]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    for seg in get_segments(":", size):
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size) + 1
+    for seg in time_segments[4]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size)
+    for seg in time_segments[5]:
+        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+    offset += get_offset(size)
 
 
 def main_clock(screen) -> None:
@@ -94,18 +129,17 @@ def main_clock(screen) -> None:
     screen.timeout(0)  # Turn blocking off for screen.getch()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
-    i = 0
+    displayed = datetime.now().strftime("%H%M%S")
     while True:
         screen.clear()
-        display(screen, i)
-        i += 1
-        if i > 9:
-            i = 0
+        if datetime.now().strftime("%H%M%S") != displayed:
+            displayed = datetime.now().strftime("%H%M%S")
+        display(screen, displayed, "large")
         screen.refresh()
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
             break
-        sleep(1)
+        time.sleep(0.1)
 
     screen.erase()
     screen.refresh()
