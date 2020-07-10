@@ -4,6 +4,10 @@ import time
 from datetime import datetime
 
 
+class CTClockError(Exception):
+    pass
+
+
 class SmSeg:
     seg1 = (0, 0), (0, 1), (0, 2)
     seg2 = (0, 2), (1, 2), (2, 2)
@@ -129,12 +133,31 @@ def main_clock(screen) -> None:
     screen.timeout(0)  # Turn blocking off for screen.getch()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
+    size_y, size_x = screen.getmaxyx()
+    if size_x >= 86 and size_y >= 20:
+        text_size = "large"
+    elif size_x >= 44 and size_y >= 10:
+        text_size = "medium"
+    elif size_x >= 34 and size_y >= 8:
+        text_size = "small"
+    else:
+        raise CTClockError("Error screen / window is to small")
     displayed = datetime.now().strftime("%H%M%S")
     while True:
+        if curses.is_term_resized(size_y, size_x):
+            size_y, size_x = screen.getmaxyx()
+            if size_x >= 86 and size_y >= 20:
+                text_size = "large"
+            elif size_x >= 44 and size_y >= 10:
+                text_size = "medium"
+            elif size_x >= 34 and size_y >= 8:
+                text_size = "small"
+            else:
+                raise CTClockError("Error screen / window is to small")
         screen.clear()
         if datetime.now().strftime("%H%M%S") != displayed:
             displayed = datetime.now().strftime("%H%M%S")
-        display(screen, displayed, "large")
+        display(screen, displayed, text_size)
         screen.refresh()
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
@@ -145,9 +168,13 @@ def main_clock(screen) -> None:
     screen.refresh()
 
 
-def main() -> None:
-    curses.wrapper(main_clock)
+def main() -> int:
+    try:
+        curses.wrapper(main_clock)
+    except CTClockError as e:
+        print(e)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())
