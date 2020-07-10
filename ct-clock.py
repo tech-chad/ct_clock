@@ -156,7 +156,7 @@ def main_clock(screen) -> None:
                 raise CTClockError("Error screen / window is to small")
         screen.clear()
         if datetime.now().strftime("%H%M%S") != displayed:
-            displayed = datetime.now().strftime("%H%M%S")
+            displayed = datetime.today().strftime("%H%M%S")
         display(screen, displayed, text_size)
         screen.refresh()
         ch = screen.getch()
