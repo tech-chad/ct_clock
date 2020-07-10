@@ -98,34 +98,48 @@ def get_offset(size: str) -> int:
         return 14
 
 
-def display(screen, time_string: str, size: str) -> None:
+def get_space_size(size: str) -> tuple:
+    if size == "small":
+        return 5, 30
+    elif size == "medium":
+        return 7, 36
+    elif size == "large":
+        return 18, 84
+
+
+def display(screen, time_string: str, size: str,
+            size_x: int, size_y: int) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
-    offset = 0
+
+    size_offset = get_offset(size)
+    height, width = get_space_size(size)
+    hc = int((size_y - height) / 2)  # height/vertical center
+    w_offset = int((size_x - width) / 2)  # width/horizontal center
 
     for seg in time_segments[0]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size)
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset
     for seg in time_segments[1]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
     for seg in get_segments(":", size):
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size) + 1
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset + 1
     for seg in time_segments[2]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size)
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset
     for seg in time_segments[3]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
     for seg in get_segments(":", size):
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size) + 1
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset + 1
     for seg in time_segments[4]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size)
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset
     for seg in time_segments[5]:
-        screen.addstr(seg[0], seg[1] + offset, " ", curses.color_pair(1))
-    offset += get_offset(size)
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    w_offset += size_offset
 
 
 def main_clock(screen) -> None:
@@ -157,7 +171,7 @@ def main_clock(screen) -> None:
         screen.clear()
         if datetime.now().strftime("%H%M%S") != displayed:
             displayed = datetime.today().strftime("%H%M%S")
-        display(screen, displayed, text_size)
+        display(screen, displayed, text_size, size_x, size_y)
         screen.refresh()
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
