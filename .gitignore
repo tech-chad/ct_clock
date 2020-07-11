@@ -1,1 +1,4 @@
 /venv/
+/build
+/ct_clock.egg-info
+dist
