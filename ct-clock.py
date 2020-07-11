@@ -147,6 +147,7 @@ def main_clock(screen) -> None:
     screen.timeout(0)  # Turn blocking off for screen.getch()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
+    update_screen = True
     size_y, size_x = screen.getmaxyx()
     if size_x >= 86 and size_y >= 20:
         text_size = "large"
@@ -160,6 +161,7 @@ def main_clock(screen) -> None:
     while True:
         if curses.is_term_resized(size_y, size_x):
             size_y, size_x = screen.getmaxyx()
+            update_screen = True
             if size_x >= 86 and size_y >= 20:
                 text_size = "large"
             elif size_x >= 44 and size_y >= 10:
@@ -168,11 +170,12 @@ def main_clock(screen) -> None:
                 text_size = "small"
             else:
                 raise CTClockError("Error screen / window is to small")
-        screen.clear()
-        if datetime.now().strftime("%H%M%S") != displayed:
+        if datetime.now().strftime("%H%M%S") != displayed or update_screen:
+            screen.clear()
             displayed = datetime.today().strftime("%H%M%S")
-        display(screen, displayed, text_size, size_x, size_y)
-        screen.refresh()
+            display(screen, displayed, text_size, size_x, size_y)
+            screen.refresh()
+            update_screen = False
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
             break
