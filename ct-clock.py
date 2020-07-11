@@ -1,7 +1,20 @@
 """ Curses terminal digital clock"""
+import argparse
 import curses
 import time
 from datetime import datetime
+
+from typing import Optional
+from typing import Sequence
+
+
+# might not need color black
+CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
+                 "red": curses.COLOR_RED, "green": curses.COLOR_GREEN,
+                 "blue": curses.COLOR_BLUE, "magenta": curses.COLOR_MAGENTA,
+                 "yellow": curses.COLOR_YELLOW, "cyan": curses.COLOR_CYAN}
+CHAR_CODES_COLOR = {114: "red", 116: "green", 121: "blue", 117: "yellow",
+                    105: "magenta", 111: "cyan", 112: "white"}
 
 
 class CTClockError(Exception):
@@ -107,12 +120,17 @@ def get_space_size(size: str) -> tuple:
         return 18, 84
 
 
+def set_color(color: str) -> None:
+    curses.init_pair(1, CURSES_COLORS[color], CURSES_COLORS[color])
+    # curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
+
+
 def display(screen, time_string: str, size: str,
-            size_x: int, size_y: int) -> None:
+            size_x: int, size_y: int, color: str) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
-
+    set_color(color)
     size_offset = get_offset(size)
     height, width = get_space_size(size)
     hc = int((size_y - height) / 2)  # height/vertical center
@@ -142,11 +160,9 @@ def display(screen, time_string: str, size: str,
     w_offset += size_offset
 
 
-def main_clock(screen) -> None:
+def main_clock(screen, color: str) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_WHITE)
-    curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
     update_screen = True
     size_y, size_x = screen.getmaxyx()
     if size_x >= 86 and size_y >= 20:
@@ -173,21 +189,31 @@ def main_clock(screen) -> None:
         if datetime.now().strftime("%H%M%S") != displayed or update_screen:
             screen.clear()
             displayed = datetime.today().strftime("%H%M%S")
-            display(screen, displayed, text_size, size_x, size_y)
+            display(screen, displayed, text_size, size_x, size_y, color)
             screen.refresh()
             update_screen = False
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
             break
+        if ch in CHAR_CODES_COLOR.keys():
+            color = CHAR_CODES_COLOR[ch]
+            update_screen = True
         time.sleep(0.1)
 
     screen.erase()
     screen.refresh()
 
 
-def main() -> int:
+def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--color", default="white", help="digit color")
+    return parser.parse_args(argv)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = argument_parser(argv)
     try:
-        curses.wrapper(main_clock)
+        curses.wrapper(main_clock, args.color)
     except CTClockError as e:
         print(e)
         return 1
