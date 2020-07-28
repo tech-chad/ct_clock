@@ -132,19 +132,20 @@ def get_space_size(size: str, show_seconds: bool) -> tuple:
             h = 18
             w = 84
         else:
-            h = 16
+            h = 18
             w = 56
     return h, w
 
 
 def set_color(color: str) -> None:
     curses.init_pair(1, CURSES_COLORS[color], CURSES_COLORS[color])
+    curses.init_pair(2, CURSES_COLORS[color], curses.COLOR_BLACK)
     # curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
 
 
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
-            show_seconds: bool) -> None:
+            show_seconds: bool, am_pm: str) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -177,9 +178,13 @@ def display(screen, time_string: str, size: str,
         for seg in time_segments[5]:
             screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
         w_offset += size_offset
+    else:
+        w_offset += size_offset
+    if am_pm != "":
+        screen.addstr(height + hc, w_offset, am_pm, curses.color_pair(2))
 
 
-def main_clock(screen, color: str, show_seconds: bool) -> None:
+def main_clock(screen, color: str, show_seconds: bool, military_time: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -192,24 +197,34 @@ def main_clock(screen, color: str, show_seconds: bool) -> None:
         text_size = "small"
     else:
         raise CTClockError("Error screen / window is to small")
-    displayed = datetime.now().strftime("%H%M%S")
+
+    if military_time:
+        time_format = "%H%M%S"
+    else:
+        time_format = "%I%M%S"
+
+    displayed = datetime.now().strftime(time_format)
     while True:
         if curses.is_term_resized(size_y, size_x):
             size_y, size_x = screen.getmaxyx()
             update_screen = True
-            if size_x >= 86 and size_y >= 20:
+            if size_x >= 90 and size_y >= 20:
                 text_size = "large"
-            elif size_x >= 44 and size_y >= 10:
+            elif size_x >= 46 and size_y >= 10:
                 text_size = "medium"
-            elif size_x >= 34 and size_y >= 8:
+            elif size_x >= 36 and size_y >= 8:
                 text_size = "small"
             else:
                 raise CTClockError("Error screen / window is to small")
-        if datetime.now().strftime("%H%M%S") != displayed or update_screen:
+        if datetime.now().strftime(time_format) != displayed or update_screen:
             screen.clear()
-            displayed = datetime.today().strftime("%H%M%S")
+            displayed = datetime.today().strftime(time_format)
+            if military_time:
+                am_pm = ""
+            else:
+                am_pm = datetime.today().strftime("%p")
             display(screen, displayed, text_size, size_x, size_y,
-                    color, show_seconds)
+                    color, show_seconds, am_pm)
             screen.refresh()
             update_screen = False
         ch = screen.getch()
@@ -220,6 +235,14 @@ def main_clock(screen, color: str, show_seconds: bool) -> None:
             update_screen = True
         if ch == 115:  # s
             show_seconds = not show_seconds
+            update_screen = True
+        if ch == 109:  # m
+            if military_time:
+                time_format = "%I%M%S"
+                military_time = False
+            else:
+                time_format = "%H%M%S"
+                military_time = True
             update_screen = True
         time.sleep(0.1)
 
@@ -232,13 +255,15 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("-c", "--color", default="white", help="digit color")
     parser.add_argument("-s", "--no_seconds", action="store_false",
                         help="Do not show seconds")
+    parser.add_argument("-m", "--military_time", action="store_true",
+                        help="Military time (24 hour clock)")
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
     try:
-        curses.wrapper(main_clock, args.color, args.no_seconds)
+        curses.wrapper(main_clock, args.color, args.no_seconds, args.military_time)
     except CTClockError as e:
         print(e)
         return 1
