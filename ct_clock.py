@@ -111,13 +111,30 @@ def get_offset(size: str) -> int:
         return 14
 
 
-def get_space_size(size: str) -> tuple:
+def get_space_size(size: str, show_seconds: bool) -> tuple:
+    h = w = 0
     if size == "small":
-        return 5, 30
+        if show_seconds:
+            h = 5
+            w = 30
+        else:
+            h = 5
+            w = 20
     elif size == "medium":
-        return 7, 36
+        if show_seconds:
+            h = 7
+            w = 36
+        else:
+            h = 7
+            w = 24
     elif size == "large":
-        return 18, 84
+        if show_seconds:
+            h = 18
+            w = 84
+        else:
+            h = 16
+            w = 56
+    return h, w
 
 
 def set_color(color: str) -> None:
@@ -126,13 +143,14 @@ def set_color(color: str) -> None:
 
 
 def display(screen, time_string: str, size: str,
-            size_x: int, size_y: int, color: str) -> None:
+            size_x: int, size_y: int, color: str,
+            show_seconds: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
     set_color(color)
     size_offset = get_offset(size)
-    height, width = get_space_size(size)
+    height, width = get_space_size(size, show_seconds)
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
 
@@ -149,18 +167,19 @@ def display(screen, time_string: str, size: str,
     w_offset += size_offset
     for seg in time_segments[3]:
         screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
-    for seg in get_segments(":", size):
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
-    w_offset += size_offset + 1
-    for seg in time_segments[4]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
-    w_offset += size_offset
-    for seg in time_segments[5]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
-    w_offset += size_offset
+    if show_seconds:
+        for seg in get_segments(":", size):
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        w_offset += size_offset + 1
+        for seg in time_segments[4]:
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        w_offset += size_offset
+        for seg in time_segments[5]:
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        w_offset += size_offset
 
 
-def main_clock(screen, color: str) -> None:
+def main_clock(screen, color: str, show_seconds: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -189,7 +208,8 @@ def main_clock(screen, color: str) -> None:
         if datetime.now().strftime("%H%M%S") != displayed or update_screen:
             screen.clear()
             displayed = datetime.today().strftime("%H%M%S")
-            display(screen, displayed, text_size, size_x, size_y, color)
+            display(screen, displayed, text_size, size_x, size_y,
+                    color, show_seconds)
             screen.refresh()
             update_screen = False
         ch = screen.getch()
@@ -197,6 +217,9 @@ def main_clock(screen, color: str) -> None:
             break
         if ch in CHAR_CODES_COLOR.keys():
             color = CHAR_CODES_COLOR[ch]
+            update_screen = True
+        if ch == 115:  # s
+            show_seconds = not show_seconds
             update_screen = True
         time.sleep(0.1)
 
@@ -207,13 +230,15 @@ def main_clock(screen, color: str) -> None:
 def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--color", default="white", help="digit color")
+    parser.add_argument("-s", "--no_seconds", action="store_false",
+                        help="Do not show seconds")
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
     try:
-        curses.wrapper(main_clock, args.color)
+        curses.wrapper(main_clock, args.color, args.no_seconds)
     except CTClockError as e:
         print(e)
         return 1
