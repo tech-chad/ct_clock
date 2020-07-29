@@ -184,7 +184,8 @@ def display(screen, time_string: str, size: str,
         screen.addstr(height + hc, w_offset, am_pm, curses.color_pair(2))
 
 
-def main_clock(screen, color: str, show_seconds: bool, military_time: bool) -> None:
+def main_clock(screen, color: str, show_seconds: bool,
+               military_time: bool, screen_saver_mode: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -228,6 +229,8 @@ def main_clock(screen, color: str, show_seconds: bool, military_time: bool) -> N
             screen.refresh()
             update_screen = False
         ch = screen.getch()
+        if screen_saver_mode and ch != -1:
+            break
         if ch in [81, 113]:  # q, Q
             break
         if ch in CHAR_CODES_COLOR.keys():
@@ -257,13 +260,16 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Do not show seconds")
     parser.add_argument("-m", "--military_time", action="store_true",
                         help="Military time (24 hour clock)")
+    parser.add_argument("-S", "--screensaver", action="store_true",
+                        help="Screen saver mode.  Any key will exit")
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
     try:
-        curses.wrapper(main_clock, args.color, args.no_seconds, args.military_time)
+        curses.wrapper(main_clock, args.color, args.no_seconds,
+                       args.military_time, args.screensaver)
     except CTClockError as e:
         print(e)
         return 1
