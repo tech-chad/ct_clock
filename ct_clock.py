@@ -146,7 +146,7 @@ def set_color(color: str) -> None:
 
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
-            show_seconds: bool, am_pm: str) -> None:
+            show_seconds: bool, am_pm: str, show_date: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -183,11 +183,14 @@ def display(screen, time_string: str, size: str,
         w_offset += size_offset
     if am_pm != "":
         screen.addstr(height + hc, w_offset, am_pm, curses.color_pair(2))
+    if show_date:
+        date = datetime.today().date().strftime("%d/%m/%Y")
+        screen.addstr(height + hc, w_offset - 15, date, curses.color_pair(2))
 
 
 def main_clock(screen, static_color: str, show_seconds: bool,
                military_time: bool, screen_saver_mode: bool,
-               mode: int, cycle_timing: int) -> None:
+               mode: int, cycle_timing: int, show_date: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -252,7 +255,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             else:
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
-                    color, show_seconds, am_pm)
+                    color, show_seconds, am_pm, show_date)
             screen.refresh()
             update_screen = False
         ch = screen.getch()
@@ -282,6 +285,9 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 hour = "%H"
                 military_time = True
             update_screen = True
+        elif ch == 101:  # e
+            show_date = not show_date  # flips between True and False
+            update_screen = True
         if ch == 49:  # 1
             cycle_timing = 1
         elif ch == 50:  # 2
@@ -307,6 +313,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Mode: 0-normal, 1-cycle whole")
     parser.add_argument("--cycle_timing", type=int, choices=[1, 2, 3], default=2,
                         help="Cycle timing (1 every sec, 2 every min, 3 every hour)")
+    parser.add_argument("--show_date", action="store_true",
+                        help="Show date")
     return parser.parse_args(argv)
 
 
@@ -315,7 +323,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         curses.wrapper(main_clock, args.color, args.no_seconds,
                        args.military_time, args.screensaver,
-                       args.mode, args.cycle_timing)
+                       args.mode, args.cycle_timing, args.show_date)
     except CTClockError as e:
         print(e)
         return 1
