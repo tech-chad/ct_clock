@@ -15,6 +15,7 @@ CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
                  "yellow": curses.COLOR_YELLOW, "cyan": curses.COLOR_CYAN}
 CHAR_CODES_COLOR = {114: "red", 116: "green", 121: "blue", 117: "yellow",
                     105: "magenta", 111: "cyan", 112: "white"}
+COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "white"]
 
 
 class CTClockError(Exception):
@@ -184,8 +185,9 @@ def display(screen, time_string: str, size: str,
         screen.addstr(height + hc, w_offset, am_pm, curses.color_pair(2))
 
 
-def main_clock(screen, color: str, show_seconds: bool,
-               military_time: bool, screen_saver_mode: bool) -> None:
+def main_clock(screen, static_color: str, show_seconds: bool,
+               military_time: bool, screen_saver_mode: bool,
+               mode: int, cycle_timing: int) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -201,9 +203,12 @@ def main_clock(screen, color: str, show_seconds: bool,
 
     if military_time:
         time_format = "%H%M%S"
+        hour = "%H"
     else:
         time_format = "%I%M%S"
+        hour = "%I"
 
+    cycle_count = 0
     displayed = datetime.now().strftime(time_format)
     while True:
         if curses.is_term_resized(size_y, size_x):
@@ -218,12 +223,34 @@ def main_clock(screen, color: str, show_seconds: bool,
             else:
                 raise CTClockError("Error screen / window is to small")
         if datetime.now().strftime(time_format) != displayed or update_screen:
+            if mode == 1:
+                if cycle_timing == 1:
+                    if cycle_count == 6:
+                        cycle_count = 0
+                    else:
+                        cycle_count += 1
+                elif cycle_timing == 2 and datetime.now().strftime("%S") == "00":
+                    if cycle_count == 6:
+                        cycle_count = 0
+                    else:
+                        cycle_count += 1
+                elif cycle_timing == 3 and datetime.now().strftime(hour) != displayed[0:2]:
+                    if cycle_count == 6:
+                        cycle_count = 0
+                    else:
+                        cycle_count += 1
             screen.clear()
             displayed = datetime.today().strftime(time_format)
             if military_time:
                 am_pm = ""
             else:
                 am_pm = datetime.today().strftime("%p")
+            if mode == 0:
+                color = static_color
+            elif mode == 1:
+                color = COLORS[cycle_count]
+            else:
+                color = static_color
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm)
             screen.refresh()
@@ -233,8 +260,14 @@ def main_clock(screen, color: str, show_seconds: bool,
             break
         if ch in [81, 113]:  # q, Q
             break
-        if ch in CHAR_CODES_COLOR.keys():
-            color = CHAR_CODES_COLOR[ch]
+        if ch in CHAR_CODES_COLOR.keys() and mode == 0:
+            static_color = CHAR_CODES_COLOR[ch]
+            update_screen = True
+        if ch == 99:  # c
+            if mode == 1:
+                mode = 0
+            else:
+                mode += 1
             update_screen = True
         if ch == 115:  # s
             show_seconds = not show_seconds
@@ -242,11 +275,19 @@ def main_clock(screen, color: str, show_seconds: bool,
         if ch == 109:  # m
             if military_time:
                 time_format = "%I%M%S"
+                hour = "%I"
                 military_time = False
             else:
                 time_format = "%H%M%S"
+                hour = "%H"
                 military_time = True
             update_screen = True
+        if ch == 49:  # 1
+            cycle_timing = 1
+        elif ch == 50:  # 2
+            cycle_timing = 2
+        elif ch == 51:  # 3
+            cycle_timing = 3
         time.sleep(0.1)
 
     screen.erase()
@@ -262,6 +303,10 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Military time (24 hour clock)")
     parser.add_argument("-S", "--screensaver", action="store_true",
                         help="Screen saver mode.  Any key will exit")
+    parser.add_argument("--mode", type=int, choices=[0, 1], default=0,
+                        help="Mode: 0-normal, 1-cycle whole")
+    parser.add_argument("--cycle_timing", type=int, choices=[1, 2, 3], default=2,
+                        help="Cycle timing (1 every sec, 2 every min, 3 every hour)")
     return parser.parse_args(argv)
 
 
@@ -269,7 +314,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
     try:
         curses.wrapper(main_clock, args.color, args.no_seconds,
-                       args.military_time, args.screensaver)
+                       args.military_time, args.screensaver,
+                       args.mode, args.cycle_timing)
     except CTClockError as e:
         print(e)
         return 1
