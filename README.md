@@ -7,6 +7,7 @@ curses terminal digital clock
 - ```s``` show seconds
 - ```m``` 24 Hour Clock
 - ```c``` Mode: normal, cycle whole
+- ```b``` Blink colon
 - ```123``` Cycle mode timing (1 every sec, 2 every min, 3 every hour)
 - ```rtyuiop``` Color select
 

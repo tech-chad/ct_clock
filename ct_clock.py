@@ -146,7 +146,8 @@ def set_color(color: str) -> None:
 
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
-            show_seconds: bool, am_pm: str, show_date: bool) -> None:
+            show_seconds: bool, am_pm: str, show_date: bool,
+            colon_on: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -161,8 +162,9 @@ def display(screen, time_string: str, size: str,
     w_offset += size_offset
     for seg in time_segments[1]:
         screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
-    for seg in get_segments(":", size):
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+    if colon_on:
+        for seg in get_segments(":", size):
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
     w_offset += size_offset + 1
     for seg in time_segments[2]:
         screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
@@ -170,8 +172,9 @@ def display(screen, time_string: str, size: str,
     for seg in time_segments[3]:
         screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
     if show_seconds:
-        for seg in get_segments(":", size):
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        if colon_on:
+            for seg in get_segments(":", size):
+                screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
         w_offset += size_offset + 1
         for seg in time_segments[4]:
             screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
@@ -190,7 +193,8 @@ def display(screen, time_string: str, size: str,
 
 def main_clock(screen, static_color: str, show_seconds: bool,
                military_time: bool, screen_saver_mode: bool,
-               mode: int, cycle_timing: int, show_date: bool) -> None:
+               mode: int, cycle_timing: int, show_date: bool,
+               blink_colon: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     update_screen = True
@@ -210,7 +214,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
     else:
         time_format = "%I%M%S"
         hour = "%I"
-
+    colon_on = True
     cycle_count = 0
     displayed = datetime.now().strftime(time_format)
     while True:
@@ -244,6 +248,8 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                         cycle_count += 1
             screen.clear()
             displayed = datetime.today().strftime(time_format)
+            if blink_colon and datetime.now().strftime("%S") != displayed[6:8]:
+                colon_on = not colon_on
             if military_time:
                 am_pm = ""
             else:
@@ -255,7 +261,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             else:
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
-                    color, show_seconds, am_pm, show_date)
+                    color, show_seconds, am_pm, show_date, colon_on)
             screen.refresh()
             update_screen = False
         ch = screen.getch()
@@ -275,6 +281,12 @@ def main_clock(screen, static_color: str, show_seconds: bool,
         if ch == 115:  # s
             show_seconds = not show_seconds
             update_screen = True
+        elif ch == 98:  # b
+            if blink_colon:
+                blink_colon = False
+                colon_on = True
+            else:
+                blink_colon = True
         if ch == 109:  # m
             if military_time:
                 time_format = "%I%M%S"
@@ -309,6 +321,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Military time (24 hour clock)")
     parser.add_argument("-S", "--screensaver", action="store_true",
                         help="Screen saver mode.  Any key will exit")
+    parser.add_argument("-b", "--blink_colon", action="store_true",
+                        help="Blinking colon")
     parser.add_argument("--mode", type=int, choices=[0, 1], default=0,
                         help="Mode: 0-normal, 1-cycle whole")
     parser.add_argument("--cycle_timing", type=int, choices=[1, 2, 3], default=2,
@@ -323,7 +337,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         curses.wrapper(main_clock, args.color, args.no_seconds,
                        args.military_time, args.screensaver,
-                       args.mode, args.cycle_timing, args.show_date)
+                       args.mode, args.cycle_timing, args.show_date,
+                       args.blink_colon)
     except CTClockError as e:
         print(e)
         return 1
