@@ -144,6 +144,7 @@ def display(screen, time_string: str, size: str,
     height, width = get_space_size(size, show_seconds)
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
+    screen.clear()
     for seg in time_segments[0]:
         screen.addstr(seg[0] + hc, seg[1] + w_offset, "1", curses.color_pair(1))
     w_offset += size_offset
@@ -176,6 +177,7 @@ def display(screen, time_string: str, size: str,
     if show_date:
         date = datetime.today().date().strftime("%d/%m/%Y")
         screen.addstr(height + hc, w_offset - 15, date, curses.color_pair(2))
+    screen.refresh()
 
 
 def main_clock(screen, static_color: str, show_seconds: bool,
@@ -213,7 +215,6 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             else:
                 raise CTClockError("Error screen / window is to small")
         if update_screen or datetime.now().strftime(time_format) != displayed:
-            screen.clear()
             old_displayed = displayed
             displayed = datetime.today().strftime(time_format)
             if blink_colon:
@@ -245,7 +246,6 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on)
-            screen.refresh()
             update_screen = False
         ch = screen.getch()
         if screen_saver_mode and ch != -1:
@@ -287,7 +287,6 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             cycle_timing = 2
         elif ch == 51:  # 3
             cycle_timing = 3
-        time.sleep(0.1)
 
     screen.erase()
     screen.refresh()
