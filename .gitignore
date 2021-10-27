@@ -2,3 +2,5 @@
 /build
 /ct_clock.egg-info
 dist
+tests
+.pytest_cache
