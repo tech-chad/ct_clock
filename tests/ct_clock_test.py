@@ -109,3 +109,34 @@ def test_ct_clock_running_military_time():
         h.write("m")
         h.press("Enter")
         h.await_text("M")
+
+
+def test_ct_clock_digits():
+    with Runner(*ct_clock_run()) as h:
+        h.await_text("M")
+        sc = h.screenshot()
+        assert "1" in sc
+        assert "2" in sc
+        assert "3" in sc
+        assert "4" in sc
+        assert "5" in sc
+        assert "6" in sc
+
+
+def test_ct_clock_no_seconds():
+    with Runner(*ct_clock_run("--no_seconds")) as h:
+        h.default_timeout = 2
+        h.await_text("M")
+        sc = h.screenshot()
+        assert "5" not in sc
+        assert "6" not in sc
+        h.write("s")
+        h.press("Enter")
+        h.await_text("5")
+        h.await_text("6")
+        h.write("s")
+        h.press("Enter")
+        sleep(1)
+        sc = h.screenshot()
+        assert "5" not in sc
+        assert "6" not in sc

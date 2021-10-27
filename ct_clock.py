@@ -156,31 +156,30 @@ def display(screen, time_string: str, size: str,
     height, width = get_space_size(size, show_seconds)
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
-
     for seg in time_segments[0]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, "1", curses.color_pair(1))
     w_offset += size_offset
     for seg in time_segments[1]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, "2", curses.color_pair(1))
     if colon_on:
         for seg in get_segments(":", size):
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, ":", curses.color_pair(1))
     w_offset += size_offset + 1
     for seg in time_segments[2]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, "3", curses.color_pair(1))
     w_offset += size_offset
     for seg in time_segments[3]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, "4", curses.color_pair(1))
     if show_seconds:
         if colon_on:
             for seg in get_segments(":", size):
-                screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+                screen.addstr(seg[0] + hc, seg[1] + w_offset, ":", curses.color_pair(1))
         w_offset += size_offset + 1
         for seg in time_segments[4]:
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, "5", curses.color_pair(1))
         w_offset += size_offset
         for seg in time_segments[5]:
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, " ", curses.color_pair(1))
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, "6", curses.color_pair(1))
         w_offset += size_offset
     else:
         w_offset += size_offset
