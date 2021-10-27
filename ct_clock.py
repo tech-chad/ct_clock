@@ -195,12 +195,8 @@ def main_clock(screen, static_color: str, show_seconds: bool,
     else:
         raise CTClockError("Error screen / window is to small")
 
-    if military_time:
-        time_format = "%H%M%S"
-        hour = "%H"
-    else:
-        time_format = "%I%M%S"
-        hour = "%I"
+    time_format = "%H%M%S" if military_time else "%I%M%S"
+
     colon_on = True
     cycle_count = 0
     displayed = datetime.now().strftime(time_format)
@@ -218,6 +214,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 raise CTClockError("Error screen / window is to small")
         if update_screen or datetime.now().strftime(time_format) != displayed:
             screen.clear()
+            old_displayed = displayed
             displayed = datetime.today().strftime(time_format)
             if blink_colon:
                 colon_on = not colon_on
@@ -238,7 +235,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                         cycle_count = 0
                     else:
                         cycle_count += 1
-                elif cycle_timing == 3 and datetime.now().strftime(hour) != displayed[0:2]:
+                elif cycle_timing == 3 and old_displayed[0:2] != displayed[0:2]:
                     if cycle_count == 6:
                         cycle_count = 0
                     else:
@@ -248,7 +245,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on)
-            # screen.refresh()
+            screen.refresh()
             update_screen = False
         ch = screen.getch()
         if screen_saver_mode and ch != -1:
@@ -276,11 +273,9 @@ def main_clock(screen, static_color: str, show_seconds: bool,
         if ch == 109:  # m
             if military_time:
                 time_format = "%I%M%S"
-                hour = "%I"
                 military_time = False
             else:
                 time_format = "%H%M%S"
-                hour = "%H"
                 military_time = True
             update_screen = True
         elif ch == 101:  # e
