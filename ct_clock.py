@@ -6,6 +6,7 @@ from datetime import datetime
 
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 
 
 # might not need color black
@@ -75,7 +76,7 @@ def get_segments(number: str, size: str) -> tuple:
     elif size == "medium":
         seg = MedSeg
     elif size == "large":
-        seg = LrgSeg()
+        seg = LrgSeg
     else:
         seg = SmSeg
     if number == "0":
@@ -112,36 +113,23 @@ def get_offset(size: str) -> int:
         return 14
 
 
-def get_space_size(size: str, show_seconds: bool) -> tuple:
+def get_space_size(size: str, show_seconds: bool) -> Tuple[int, int]:
     h = w = 0
     if size == "small":
-        if show_seconds:
-            h = 5
-            w = 30
-        else:
-            h = 5
-            w = 20
+        h = 5
+        w = 30 if show_seconds else 20
     elif size == "medium":
-        if show_seconds:
-            h = 7
-            w = 36
-        else:
-            h = 7
-            w = 24
+        h = 7
+        w = 36 if show_seconds else 24
     elif size == "large":
-        if show_seconds:
-            h = 18
-            w = 84
-        else:
-            h = 18
-            w = 56
+        h = 18
+        w = 84 if show_seconds else 56
     return h, w
 
 
 def set_color(color: str) -> None:
     curses.init_pair(1, CURSES_COLORS[color], CURSES_COLORS[color])
     curses.init_pair(2, CURSES_COLORS[color], curses.COLOR_BLACK)
-    # curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_CYAN)
 
 
 def display(screen, time_string: str, size: str,
@@ -228,14 +216,24 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 text_size = "small"
             else:
                 raise CTClockError("Error screen / window is to small")
-        if datetime.now().strftime(time_format) != displayed or update_screen:
-            if mode == 1:
+        if update_screen or datetime.now().strftime(time_format) != displayed:
+            screen.clear()
+            displayed = datetime.today().strftime(time_format)
+            if blink_colon:
+                colon_on = not colon_on
+            if military_time:
+                am_pm = ""
+            else:
+                am_pm = datetime.today().strftime("%p")
+            if mode == 0:
+                color = static_color
+            elif mode == 1:
                 if cycle_timing == 1:
                     if cycle_count == 6:
                         cycle_count = 0
                     else:
                         cycle_count += 1
-                elif cycle_timing == 2 and datetime.now().strftime("%S") == "00":
+                elif cycle_timing == 2 and displayed[-2:] == "00":
                     if cycle_count == 6:
                         cycle_count = 0
                     else:
@@ -245,30 +243,19 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                         cycle_count = 0
                     else:
                         cycle_count += 1
-            screen.clear()
-            displayed = datetime.today().strftime(time_format)
-            if blink_colon and datetime.now().strftime("%S") != displayed[6:8]:
-                colon_on = not colon_on
-            if military_time:
-                am_pm = ""
-            else:
-                am_pm = datetime.today().strftime("%p")
-            if mode == 0:
-                color = static_color
-            elif mode == 1:
                 color = COLORS[cycle_count]
             else:
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on)
-            screen.refresh()
+            # screen.refresh()
             update_screen = False
         ch = screen.getch()
         if screen_saver_mode and ch != -1:
             break
         if ch in [81, 113]:  # q, Q
             break
-        if ch in CHAR_CODES_COLOR.keys() and mode == 0:
+        if mode == 0 and ch in CHAR_CODES_COLOR.keys():
             static_color = CHAR_CODES_COLOR[ch]
             update_screen = True
         if ch == 99:  # c
