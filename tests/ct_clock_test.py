@@ -1,9 +1,23 @@
+import datetime
+import types
+import contextlib
+
 import pytest
 from time import sleep
 
+import time_machine
 from hecate import Runner
 
 import ct_clock
+
+
+@contextlib.contextmanager
+def my_time_context_manager(*args, **kwargs):
+    r = ct_clock.MyTime(*args, **kwargs)
+    try:
+        yield r
+    finally:
+        r.reset_time()
 
 
 def ct_clock_run(*args):
@@ -40,6 +54,91 @@ def test_get_space_size(test_size, test_show, expected):
 def test_get_segments(test_number, test_size, expected):
     result = ct_clock.get_segments(test_number, test_size)
     assert result == expected
+
+
+def test_my_time_class_no_test():
+    with my_time_context_manager(False) as test_class:
+        assert test_class.test_mode is False
+        assert test_class.test_time == ""
+        assert test_class.tick is True
+        assert test_class.time is None
+
+
+def test_my_time_class_test_mode_tick():
+    with my_time_context_manager(True, "02:02:02") as test_class:
+        assert test_class.test_mode is True
+        assert test_class.test_time == "02:02:02"
+        assert test_class.tick is True
+        assert isinstance(test_class.time, types.GeneratorType)
+
+
+def test_my_time_class_test_mode_no_tick():
+    with my_time_context_manager(True, "02:02:02", False) as test_class:
+        assert test_class.test_mode is True
+        assert test_class.test_time == "02:02:02"
+        assert test_class.tick is False
+        assert isinstance(test_class.time, types.GeneratorType)
+
+
+@pytest.mark.parametrize("test_time, test_format, expected", [
+    ("2:00:00", "%H%M%S", "020000"), ("14:00:00", "%H%M%S", "140000"),
+    ("2:00:00", "%I%M%S", "020000"), ("14:00:00", "%I%M%S", "020000"),
+    ("2:00:00", "%p", "AM"), ("14:00:00", "%p", "PM")
+])
+def test_my_time_get_time_no_test(test_time, test_format, expected):
+    with time_machine.travel(test_time):
+        t = ct_clock.MyTime(False)
+        result = t.get_time(test_format)
+        assert result == expected
+
+
+def test_my_time_get_time_test_mode_tick_on():
+    with my_time_context_manager(True, "02:00:00", True) as t:
+        assert t.get_time("%I%M%S") == "020000"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "020001"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "020002"
+
+
+def test_my_time_get_time_test_mode_military_time_tick_on():
+    with my_time_context_manager(True, "16:00:00", True) as t:
+        assert t.get_time("%H%M%S") == "160000"
+        sleep(1)
+        assert t.get_time("%H%M%S") == "160001"
+        sleep(1)
+        assert t.get_time("%H%M%S") == "160002"
+
+
+def test_my_time_get_time_test_mode_switch_military_time_tick_on():
+    with my_time_context_manager(True, "16:00:00", True) as t:
+        assert t.get_time("%H%M%S") == "160000"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "040001"
+        sleep(1)
+        assert t.get_time("%H%M%S") == "160002"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "040003"
+
+
+def test_my_time_get_time_test_mode_tick_off():
+    with my_time_context_manager(True, "02:00:00", False) as t:
+        assert t.get_time("%I%M%S") == "020000"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "020000"
+        sleep(1)
+        assert t.get_time("%I%M%S") == "020000"
+
+
+def test_my_time_get_time_test_mode_reset_time():
+    with pytest.raises(StopIteration):
+        with my_time_context_manager(True, "16:00:00", True) as t:
+            assert t.get_time("%I%M%S") == "040000"
+            sleep(1)
+            assert t.get_time("%I%M%S") == "040001"
+            sleep(1)
+            t.reset_time()
+            a = t.get_time("%I%M%S") == "013002"
 
 
 @pytest.mark.parametrize("test_key", ["Q", "q"])
@@ -140,3 +239,32 @@ def test_ct_clock_no_seconds():
         sc = h.screenshot()
         assert "5" not in sc
         assert "6" not in sc
+
+
+def test_ct_clock_testing_test_mode():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "10:10:10")) as h:
+        h.await_text("test mode")
+
+
+def test_ct_clock_testing_test_mode_time():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "12:34:56")) as h:
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert "1" in sc
+        assert "2" in sc
+        assert "3" in sc
+        assert "4" in sc
+        assert "5" in sc
+        assert "6" in sc
+        assert "7" not in sc
+        assert "8" not in sc
+        assert "9" not in sc
+        assert "0" not in sc
+
+
+def test_help_test_mode_test_time_suppressed():
+    with Runner(*ct_clock_run("--help")) as h:
+        h.await_text("usage")
+        sc = h.screenshot()
+        assert "test_mode" not in sc
+        assert "test_time" not in sc

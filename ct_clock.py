@@ -8,6 +8,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+import time_machine
 
 # might not need color black
 CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
@@ -68,6 +69,35 @@ class LrgSeg:
            (8, 8), (8, 9), (9, 0), (9, 1), (9, 2), (9, 3), (9, 4), (9, 5), \
            (9, 6), (9, 7), (9, 8), (9, 9)
     colon = (5, 12), (12, 12)
+
+
+class MyTime:
+    # Use for test mode and for possible features.
+    def __init__(self, test_mode: bool,
+                 test_time: Optional[str] = "",
+                 tick: Optional[bool] = True):
+        self.test_mode = test_mode
+        self.test_time = test_time
+        self.tick = tick
+        if test_mode:
+            self.time = self._time_generator()
+        else:
+            self.time = None
+
+    def _time_generator(self):
+        with time_machine.travel(self.test_time, tick=self.tick):
+            while True:
+                yield datetime.today()
+
+    def get_time(self, time_format: str):
+        if self.test_mode:
+            return next(self.time).strftime(time_format)
+        else:
+            return datetime.today().strftime(time_format)
+
+    def reset_time(self):
+        if self.test_mode:
+            self.time.close()
 
 
 def get_segments(number: str, size: str) -> tuple:
@@ -135,7 +165,7 @@ def set_color(color: str) -> None:
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
             show_seconds: bool, am_pm: str, show_date: bool,
-            colon_on: bool) -> None:
+            colon_on: bool, test_mode: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -145,30 +175,36 @@ def display(screen, time_string: str, size: str,
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
     screen.clear()
+    d = "1" if not test_mode else time_string[:1]
     for seg in time_segments[0]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, "1", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
     w_offset += size_offset
+    d = "2" if not test_mode else time_string[1:2]
     for seg in time_segments[1]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, "2", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
     if colon_on:
         for seg in get_segments(":", size):
             screen.addstr(seg[0] + hc, seg[1] + w_offset, ":", curses.color_pair(1))
     w_offset += size_offset + 1
+    d = "3" if not test_mode else time_string[2:3]
     for seg in time_segments[2]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, "3", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
     w_offset += size_offset
+    d = "4" if not test_mode else time_string[3:4]
     for seg in time_segments[3]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, "4", curses.color_pair(1))
+        screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
     if show_seconds:
         if colon_on:
             for seg in get_segments(":", size):
                 screen.addstr(seg[0] + hc, seg[1] + w_offset, ":", curses.color_pair(1))
         w_offset += size_offset + 1
+        d = "5" if not test_mode else time_string[4:5]
         for seg in time_segments[4]:
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, "5", curses.color_pair(1))
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
         w_offset += size_offset
+        d = "6" if not test_mode else time_string[5:]
         for seg in time_segments[5]:
-            screen.addstr(seg[0] + hc, seg[1] + w_offset, "6", curses.color_pair(1))
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
         w_offset += size_offset
     else:
         w_offset += size_offset
@@ -177,15 +213,18 @@ def display(screen, time_string: str, size: str,
     if show_date:
         date = datetime.today().date().strftime("%d/%m/%Y")
         screen.addstr(height + hc, w_offset - 15, date, curses.color_pair(2))
+    if test_mode:
+        screen.addstr(0, 0, "test mode", curses.color_pair(2))
     screen.refresh()
 
 
 def main_clock(screen, static_color: str, show_seconds: bool,
                military_time: bool, screen_saver_mode: bool,
                mode: int, cycle_timing: int, show_date: bool,
-               blink_colon: bool) -> None:
+               blink_colon: bool, test_mode: bool, test_time: str) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
+    ct_time = MyTime(test_mode, test_time, True)
     update_screen = True
     size_y, size_x = screen.getmaxyx()
     if size_x >= 86 and size_y >= 20:
@@ -201,7 +240,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
 
     colon_on = True
     cycle_count = 0
-    displayed = datetime.now().strftime(time_format)
+    displayed = ct_time.get_time(time_format)
     while True:
         if curses.is_term_resized(size_y, size_x):
             size_y, size_x = screen.getmaxyx()
@@ -214,15 +253,15 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 text_size = "small"
             else:
                 raise CTClockError("Error screen / window is to small")
-        if update_screen or datetime.now().strftime(time_format) != displayed:
+        if update_screen or ct_time.get_time(time_format) != displayed:
             old_displayed = displayed
-            displayed = datetime.today().strftime(time_format)
+            displayed = ct_time.get_time(time_format)
             if blink_colon:
                 colon_on = not colon_on
             if military_time:
                 am_pm = ""
             else:
-                am_pm = datetime.today().strftime("%p")
+                am_pm = ct_time.get_time("%p")
             if mode == 0:
                 color = static_color
             elif mode == 1:
@@ -245,7 +284,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             else:
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
-                    color, show_seconds, am_pm, show_date, colon_on)
+                    color, show_seconds, am_pm, show_date, colon_on, test_mode)
             update_screen = False
         ch = screen.getch()
         if screen_saver_mode and ch != -1:
@@ -309,6 +348,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Cycle timing (1 every sec, 2 every min, 3 every hour)")
     parser.add_argument("--show_date", action="store_true",
                         help="Show date")
+    parser.add_argument("--test_mode", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--test_time", type=str, default="", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -318,7 +359,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         curses.wrapper(main_clock, args.color, args.no_seconds,
                        args.military_time, args.screensaver,
                        args.mode, args.cycle_timing, args.show_date,
-                       args.blink_colon)
+                       args.blink_colon, args.test_mode, args.test_time)
     except CTClockError as e:
         print(e)
         return 1

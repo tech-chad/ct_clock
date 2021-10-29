@@ -71,3 +71,19 @@ def test_argument_parser_no_seconds(test_value, expected):
 def test_argument_parser_color(test_value, expected):
     result = ct_clock.argument_parser(test_value)
     assert result.color == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
+    ([], False), (["--test_mode"], True),
+])
+def test_argument_parser_test_mode(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.test_mode == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
+    ([], ""), (["--test_time", "00:00:00"], "00:00:00"),
+])
+def test_argument_parser_test_time(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.test_time == expected
