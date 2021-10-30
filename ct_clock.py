@@ -165,7 +165,7 @@ def set_color(color: str) -> None:
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
             show_seconds: bool, am_pm: str, show_date: bool,
-            colon_on: bool, test_mode: bool) -> None:
+            colon_on: bool, test_mode: bool, military_time: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -175,9 +175,10 @@ def display(screen, time_string: str, size: str,
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
     screen.clear()
-    d = "1" if not test_mode else time_string[:1]
-    for seg in time_segments[0]:
-        screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
+    if military_time or time_string[:1] == "1":
+        d = "1" if not test_mode else time_string[:1]
+        for seg in time_segments[0]:
+            screen.addstr(seg[0] + hc, seg[1] + w_offset, d, curses.color_pair(1))
     w_offset += size_offset
     d = "2" if not test_mode else time_string[1:2]
     for seg in time_segments[1]:
@@ -285,7 +286,8 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             else:
                 color = static_color
             display(screen, displayed, text_size, size_x, size_y,
-                    color, show_seconds, am_pm, show_date, colon_on, test_mode)
+                    color, show_seconds, am_pm, show_date, colon_on,
+                    test_mode, military_time)
             update_screen = False
         ch = screen.getch()
         if screen_saver_mode and ch != -1:

@@ -210,12 +210,24 @@ def test_ct_clock_running_military_time():
         h.await_text("M")
 
 
-def test_ct_clock_digits():
+def test_ct_clock_digits_military():
+    with Runner(*ct_clock_run("-m")) as h:
+        h.default_timeout = 1
+        h.await_text("1")
+        sc = h.screenshot()
+        assert "1" in sc
+        assert "2" in sc
+        assert "3" in sc
+        assert "4" in sc
+        assert "5" in sc
+        assert "6" in sc
+
+
+def test_ct_clock_digits_normal():
     with Runner(*ct_clock_run()) as h:
         h.default_timeout = 1
         h.await_text("M")
         sc = h.screenshot()
-        assert "1" in sc
         assert "2" in sc
         assert "3" in sc
         assert "4" in sc
@@ -492,3 +504,29 @@ def test_ct_clock_screen_resize_to_small_height():
         h.await_text("test mode")
         h.tmux.execute_command('resize-pane', '-L', 38)
         h.await_text("Error screen")
+
+
+def test_ct_clock_first_digit():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "14:56:38")) as h:
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert "2" in sc
+        assert "5" in sc
+        assert "6" in sc
+        assert "3" in sc
+        assert "8" in sc
+        assert "0" not in sc
+        assert "1" not in sc
+        assert "4" not in sc
+        h.write("m")
+        h.press("Enter")
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert "1" in sc
+        assert "4" in sc
+        assert "5" in sc
+        assert "6" in sc
+        assert "3" in sc
+        assert "8" in sc
+        assert "0" not in sc
+        assert "2" not in sc
