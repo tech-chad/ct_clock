@@ -82,7 +82,7 @@ def test_argument_parser_test_mode(test_value, expected):
 
 
 @pytest.mark.parametrize("test_value, expected", [
-    ([], ""), (["--test_time", "00:00:00"], "00:00:00"),
+    ([], "00:00:00"), (["--test_time", "00:00:00"], "00:00:00"),
 ])
 def test_argument_parser_test_time(test_value, expected):
     result = ct_clock.argument_parser(test_value)

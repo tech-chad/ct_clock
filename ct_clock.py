@@ -215,6 +215,7 @@ def display(screen, time_string: str, size: str,
         screen.addstr(height + hc, w_offset - 15, date, curses.color_pair(2))
     if test_mode:
         screen.addstr(0, 0, "test mode", curses.color_pair(2))
+        screen.addstr(1, 0, color, curses.color_pair(2))
     screen.refresh()
 
 
@@ -227,11 +228,11 @@ def main_clock(screen, static_color: str, show_seconds: bool,
     ct_time = MyTime(test_mode, test_time, True)
     update_screen = True
     size_y, size_x = screen.getmaxyx()
-    if size_x >= 86 and size_y >= 20:
+    if size_x >= 90 and size_y >= 20:
         text_size = "large"
-    elif size_x >= 44 and size_y >= 10:
+    elif size_x >= 46 and size_y >= 10:
         text_size = "medium"
-    elif size_x >= 34 and size_y >= 8:
+    elif size_x >= 36 and size_y >= 8:
         text_size = "small"
     else:
         raise CTClockError("Error screen / window is to small")
@@ -349,7 +350,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--show_date", action="store_true",
                         help="Show date")
     parser.add_argument("--test_mode", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--test_time", type=str, default="", help=argparse.SUPPRESS)
+    parser.add_argument("--test_time", type=str, default="00:00:00",
+                        help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 

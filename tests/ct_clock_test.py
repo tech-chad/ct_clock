@@ -212,6 +212,7 @@ def test_ct_clock_running_military_time():
 
 def test_ct_clock_digits():
     with Runner(*ct_clock_run()) as h:
+        h.default_timeout = 1
         h.await_text("M")
         sc = h.screenshot()
         assert "1" in sc
@@ -246,6 +247,11 @@ def test_ct_clock_testing_test_mode():
         h.await_text("test mode")
 
 
+def test_ct_clock_testing_test_mode_default_time():
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.await_text("0")
+
+
 def test_ct_clock_testing_test_mode_time():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "12:34:56")) as h:
         h.await_text("test mode")
@@ -268,3 +274,221 @@ def test_help_test_mode_test_time_suppressed():
         sc = h.screenshot()
         assert "test_mode" not in sc
         assert "test_time" not in sc
+
+
+def test_ct_clock_cli_military_time_time():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00", "-m")) as h:
+        h.await_text("test mode")
+        h.await_text("4")
+        h.await_text("1")
+        sc = h.screenshot()
+        assert "2" not in sc
+
+
+def test_ct_clock_running_military_time_time():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00")) as h:
+        h.await_text("test mode")
+        h.await_text("2")
+        sc = h.screenshot()
+        assert "4" not in sc
+        assert "1" not in sc
+        h.write("m")
+        h.press("Enter")
+        h.await_text("4")
+        h.await_text("1")
+        sc = h.screenshot()
+        assert "2" not in sc
+        h.write("m")
+        h.press("Enter")
+        h.await_text("2")
+        sc = h.screenshot()
+        assert "4" not in sc
+        assert "1" not in sc
+
+
+def test_ct_clock_running_military_time_time_am():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "02:00:00")) as h:
+        h.await_text("test mode")
+        h.await_text("2")
+        sc = h.screenshot()
+        assert "4" not in sc
+        assert "1" not in sc
+        h.write("m")
+        h.press("Enter")
+        h.await_text("2")
+        sc = h.screenshot()
+        assert "4" not in sc
+        assert "1" not in sc
+        h.write("m")
+        h.press("Enter")
+        h.await_text("2")
+        sc = h.screenshot()
+        assert "4" not in sc
+        assert "1" not in sc
+
+
+def test_ct_clock_colon_on_screen():
+    with Runner(*ct_clock_run()) as h:
+        h.await_text(":")
+        sleep(1)
+        h.await_text(":")
+
+
+def test_ct_clock_colon_blinking():
+    with Runner(*ct_clock_run("-b")) as h:
+        h.default_timeout = 2
+        h.await_text(":")
+        sleep(1)
+        sc = h.screenshot()
+        assert ":" not in sc
+        sleep(1)
+        h.await_text(":")
+        h.write("b")
+        h.press("Enter")
+        h.await_text(":")
+        sleep(1)
+        h.await_text(":")
+
+
+def test_ct_clock_color_default():
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00")) as h:
+        h.await_text("test mode")
+        h.await_text("white")
+
+
+@pytest.mark.parametrize("color", [
+    "white", "blue", "green", "red", "yellow", "cyan", "magenta"
+])
+def test_ct_clock_color_cli(color):
+    with Runner(*ct_clock_run("--test_mode", "-c", color)) as h:
+        h.await_text("test mode")
+        h.await_text(color)
+
+
+@pytest.mark.parametrize("command, color", [
+    ("r", "red"), ("t", "green"), ("y", "blue"), ("u", "yellow"),
+    ("i", "magenta"), ("o", "cyan"), ("p", "white")
+])
+def test_ct_clock_color_running(command, color):
+    with Runner(*ct_clock_run("--test_mode", "-c", color)) as h:
+        h.await_text("test mode")
+        h.write(command)
+        h.press("Enter")
+        h.await_text(color)
+
+
+def test_ct_clock_cycle_color_every_sec():
+    # test can be flaky
+    with Runner(*ct_clock_run("--test_mode", "--mode", "1", "--cycle_timing", "1")) as h:
+        h.default_timeout = 1
+        h.await_text("test mode")
+        h.await_text("green")
+        sleep(1)
+        h.await_text("blue")
+        sleep(1)
+        h.await_text("yellow")
+
+
+def test_ct_clock_cycle_color_every_min():
+    with Runner(*ct_clock_run("--test_mode", "--mode", "1",
+                              "--cycle_timing", "2", "--test_time", "01:01:59")) as h:
+        h.default_timeout = 1
+        h.await_text("test mode")
+        h.await_text("red")
+        h.await_text("green")
+
+
+def test_ct_clock_cycle_color_top_hour():
+    with Runner(*ct_clock_run("--test_mode", "--mode", "1",
+                              "--cycle_timing", "3", "--test_time", "01:59:59")) as h:
+        h.default_timeout = 1
+        h.await_text("test mode")
+        h.await_text("red")
+        h.await_text("green")
+
+
+def test_ct_clock_cycle_color_timing_change_min_sec():
+    # this test can be flaky
+    with Runner(*ct_clock_run("--test_mode", "--mode", "1",
+                              "--cycle_timing", "2", "--test_time", "07:02:57")) as h:
+        h.default_timeout = 3
+        h.await_text("test mode")
+        h.await_text("red")
+        sleep(2)
+        h.await_text("red")
+        h.await_text("green")
+        sc = h.screenshot()
+        assert "3" in sc
+        assert "5" not in sc
+        assert "9" not in sc
+        h.write("1")
+        h.press("Enter")
+        h.default_timeout = 1
+        h.await_text("blue")
+        sc = h.screenshot()
+        assert "1" in sc
+
+
+def test_ct_clock_screen_resize_width_running():
+    with Runner(*ct_clock_run("--test_mode"), width=100, height=100) as h:
+        h.await_text("test mode")
+        h.tmux.execute_command('split-window', '-ht0', '-l', 30)
+        h.await_text("test mode")
+        h.tmux.execute_command('resize-pane', '-L', 30)
+        h.await_text("test mode")
+
+
+def test_ct_clock_screen_resize_height_running():
+    with Runner(*ct_clock_run("--test_mode"), width=100, height=60) as h:
+        h.await_text("test mode")
+        h.tmux.execute_command('split-window', '-vt0', '-l', 45)
+        h.await_text("test mode")
+        h.tmux.execute_command('resize-pane', '-U', 6)
+        h.await_text("test mode")
+
+
+@pytest.mark.parametrize("size_width, size_height, expected", [
+    (100, 100, "test mode"), (50, 100, "test mode"), (37, 100, "test mode"),
+    (36, 100, "test mode"), (100, 50, "test mode"), (100, 9, "test mode"),
+    (100, 8, "test mode"),
+])
+def test_ct_clock_screen_start_size(size_width, size_height, expected):
+    with Runner(*ct_clock_run("--test_mode"), width=size_width, height=size_height) as h:
+        h.await_text(expected)
+
+
+@pytest.mark.parametrize("size_width, size_height, expected", [
+    (35, 100, "Error screen"),
+    (100, 7, "Error screen / window is to small"),
+    (35, 7, "Error screen")
+])
+def test_ct_clock_screen_start_size_to_small(size_width, size_height, expected):
+    with Runner("bash", width=size_width, height=size_height) as h:
+        h.await_text("$")
+        h.write("python3 ct_clock.py --test_mode")
+        h.press("Enter")
+        h.await_text(expected)
+
+
+def test_ct_clock_screen_resize_to_small_width():
+    with Runner("bash", width=100, height=60) as h:
+        h.await_text("$")
+        h.write("python3 ct_clock.py --test_mode")
+        h.press("Enter")
+        h.await_text("test mode")
+        h.tmux.execute_command('split-window', '-vt0', '-l', 45)
+        h.await_text("test mode")
+        h.tmux.execute_command('resize-pane', '-U', 7)
+        h.await_text("Error screen / window is to small")
+
+
+def test_ct_clock_screen_resize_to_small_height():
+    with Runner("bash", width=100, height=60) as h:
+        h.await_text("$")
+        h.write("python3 ct_clock.py --test_mode")
+        h.press("Enter")
+        h.await_text("test mode")
+        h.tmux.execute_command('split-window', '-ht0', '-l', 30)
+        h.await_text("test mode")
+        h.tmux.execute_command('resize-pane', '-L', 38)
+        h.await_text("Error screen")
