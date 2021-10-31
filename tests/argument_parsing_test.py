@@ -87,3 +87,19 @@ def test_argument_parser_test_mode(test_value, expected):
 def test_argument_parser_test_time(test_value, expected):
     result = ct_clock.argument_parser(test_value)
     assert result.test_time == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
+    ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
+])
+def test_color_type_valid_color(test_value, expected):
+    result = ct_clock.color_type(test_value)
+    assert result == expected
+
+
+@pytest.mark.parametrize("test_value", [
+    "gray", "gold", "2837492", "redgreen", "Blue+Green", "Blue!!!"
+])
+def test_color_type_invalid_color(test_value):
+    with pytest.raises(ct_clock.argparse.ArgumentTypeError):
+        ct_clock.color_type(test_value)

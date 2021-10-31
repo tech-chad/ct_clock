@@ -334,9 +334,21 @@ def main_clock(screen, static_color: str, show_seconds: bool,
     screen.refresh()
 
 
+def color_type(value: str) -> str:
+    """
+    Used with argparse to check if value is a valid color.
+    """
+    lower_value = value.lower()
+    if lower_value in COLORS:
+        return lower_value
+    else:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid color name")
+
+
 def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--color", default="white", help="digit color")
+    parser.add_argument("-c", "--color", type=color_type, default="white",
+                        help="digit color")
     parser.add_argument("-s", "--no_seconds", action="store_false",
                         help="Do not show seconds")
     parser.add_argument("-m", "--military_time", action="store_true",
