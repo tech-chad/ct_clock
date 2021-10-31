@@ -368,6 +368,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(e)
         return 1
 
+    except KeyboardInterrupt:
+        return 0
+
 
 if __name__ == "__main__":
     exit(main())

@@ -524,6 +524,19 @@ def test_ct_clock_screen_resize_to_small_height():
         h.await_text("Error screen")
 
 
+def test_ct_clock_handle_ctrl_c():
+    with Runner("bash", width=100, height=60) as h:
+        h.default_timeout = 2
+        h.await_text("$")
+        h.write("python3 ct_clock.py --test_mode")
+        h.press("Enter")
+        h.await_text("test mode")
+        h.press("C-c")
+        h.await_text("$")
+        sc = h.screenshot()
+        assert "Traceback" not in sc
+
+
 def test_ct_clock_first_digit():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "14:56:38")) as h:
         h.default_timeout = 2
