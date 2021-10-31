@@ -138,27 +138,30 @@ def test_my_time_get_time_test_mode_reset_time():
             assert t.get_time("%I%M%S") == "040001"
             sleep(1)
             t.reset_time()
-            a = t.get_time("%I%M%S") == "013002"
+            assert t.get_time("%I%M%S") == "013002"
 
 
 @pytest.mark.parametrize("test_key", ["Q", "q"])
 def test_ct_clock_quit(test_key):
-    with Runner(*ct_clock_run(), width=120, height=50) as h:
-        h.await_text("M")
+    with Runner(*ct_clock_run("--test_mode"), width=50, height=50) as h:
+        h.default_timeout = 2
+        h.await_text("test mode")
         h.write(test_key)
         h.press("Enter")
         h.await_exit()
 
 
 def test_ct_clock_am_pm_normal_time():
+    # Test can be flaky
     with Runner(*ct_clock_run()) as h:
-        h.await_text("M")
+        h.await_text("M", timeout=2)
 
 
 @pytest.mark.parametrize("test_key", ["u", "d", "c", "m", "p", "2", "0", " ", "]"])
 def test_ct_clock_screensaver_mode(test_key):
+    # Test can be flaky
     with Runner(*ct_clock_run("-S")) as h:
-        h.await_text("M")
+        h.await_text("M", timeout=2)
         h.write(test_key)
         h.press("Enter")
         h.await_exit()
@@ -166,6 +169,7 @@ def test_ct_clock_screensaver_mode(test_key):
 
 def test_ct_clock_cli_show_date():
     with Runner(*ct_clock_run("--show_date")) as h:
+        h.default_timeout = 2
         h.await_text("M")
         h.await_text("/")
 
@@ -213,7 +217,7 @@ def test_ct_clock_running_military_time():
 def test_ct_clock_digits_military():
     with Runner(*ct_clock_run("-m")) as h:
         h.default_timeout = 1
-        h.await_text("1")
+        h.await_text("1", timeout=2)
         sc = h.screenshot()
         assert "1" in sc
         assert "2" in sc
@@ -226,7 +230,7 @@ def test_ct_clock_digits_military():
 def test_ct_clock_digits_normal():
     with Runner(*ct_clock_run()) as h:
         h.default_timeout = 1
-        h.await_text("M")
+        h.await_text("M", timeout=2)
         sc = h.screenshot()
         assert "2" in sc
         assert "3" in sc
@@ -256,17 +260,19 @@ def test_ct_clock_no_seconds():
 
 def test_ct_clock_testing_test_mode():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "10:10:10")) as h:
-        h.await_text("test mode")
+        h.await_text("test mode", timeout=2)
 
 
 def test_ct_clock_testing_test_mode_default_time():
     with Runner(*ct_clock_run("--test_mode")) as h:
-        h.await_text("0")
+        h.await_text("test mode", timeout=2)
+        h.await_text("0", timeout=2)
 
 
 def test_ct_clock_testing_test_mode_time():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "12:34:56")) as h:
-        h.await_text("test mode")
+        # h.default_timeout = 2
+        h.await_text("test mode", timeout=3)
         sc = h.screenshot()
         assert "1" in sc
         assert "2" in sc
@@ -282,7 +288,7 @@ def test_ct_clock_testing_test_mode_time():
 
 def test_help_test_mode_test_time_suppressed():
     with Runner(*ct_clock_run("--help")) as h:
-        h.await_text("usage")
+        h.await_text("usage", timeout=2)
         sc = h.screenshot()
         assert "test_mode" not in sc
         assert "test_time" not in sc
@@ -290,6 +296,7 @@ def test_help_test_mode_test_time_suppressed():
 
 def test_ct_clock_cli_military_time_time():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00", "-m")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("4")
         h.await_text("1")
@@ -299,6 +306,7 @@ def test_ct_clock_cli_military_time_time():
 
 def test_ct_clock_running_military_time_time():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("2")
         sc = h.screenshot()
@@ -319,7 +327,8 @@ def test_ct_clock_running_military_time_time():
 
 
 def test_ct_clock_running_military_time_time_am():
-    with Runner(*ct_clock_run("--test_mode", "--test_time", "02:00:00")) as h:
+    with Runner(*ct_clock_run("--test_mode", "--test_time", "02:00:05")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("2")
         sc = h.screenshot()
@@ -341,8 +350,7 @@ def test_ct_clock_running_military_time_time_am():
 
 def test_ct_clock_colon_on_screen():
     with Runner(*ct_clock_run()) as h:
-        h.await_text(":")
-        sleep(1)
+        h.default_timeout = 2
         h.await_text(":")
 
 
@@ -364,6 +372,7 @@ def test_ct_clock_colon_blinking():
 
 def test_ct_clock_color_default():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "14:00:00")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("white")
 
@@ -372,8 +381,10 @@ def test_ct_clock_color_default():
     "white", "blue", "green", "red", "yellow", "cyan", "magenta"
 ])
 def test_ct_clock_color_cli(color):
+    # Test can be flaky.
     with Runner(*ct_clock_run("--test_mode", "-c", color)) as h:
-        h.await_text("test mode")
+        h.default_timeout = 2
+        h.await_text("test mode", timeout=3)
         h.await_text(color)
 
 
@@ -382,7 +393,9 @@ def test_ct_clock_color_cli(color):
     ("i", "magenta"), ("o", "cyan"), ("p", "white")
 ])
 def test_ct_clock_color_running(command, color):
-    with Runner(*ct_clock_run("--test_mode", "-c", color)) as h:
+    # Test could be flaky.
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         h.write(command)
         h.press("Enter")
@@ -392,7 +405,7 @@ def test_ct_clock_color_running(command, color):
 def test_ct_clock_cycle_color_every_sec():
     # test can be flaky
     with Runner(*ct_clock_run("--test_mode", "--mode", "1", "--cycle_timing", "1")) as h:
-        h.default_timeout = 1
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("green")
         sleep(1)
@@ -404,16 +417,16 @@ def test_ct_clock_cycle_color_every_sec():
 def test_ct_clock_cycle_color_every_min():
     with Runner(*ct_clock_run("--test_mode", "--mode", "1",
                               "--cycle_timing", "2", "--test_time", "01:01:59")) as h:
-        h.default_timeout = 1
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("red")
-        h.await_text("green")
+        h.await_text("green", timeout=2)
 
 
 def test_ct_clock_cycle_color_top_hour():
     with Runner(*ct_clock_run("--test_mode", "--mode", "1",
                               "--cycle_timing", "3", "--test_time", "01:59:59")) as h:
-        h.default_timeout = 1
+        h.default_timeout = 2
         h.await_text("test mode")
         h.await_text("red")
         h.await_text("green")
@@ -443,6 +456,7 @@ def test_ct_clock_cycle_color_timing_change_min_sec():
 
 def test_ct_clock_screen_resize_width_running():
     with Runner(*ct_clock_run("--test_mode"), width=100, height=100) as h:
+        h.default_timeout = 3
         h.await_text("test mode")
         h.tmux.execute_command('split-window', '-ht0', '-l', 30)
         h.await_text("test mode")
@@ -452,6 +466,7 @@ def test_ct_clock_screen_resize_width_running():
 
 def test_ct_clock_screen_resize_height_running():
     with Runner(*ct_clock_run("--test_mode"), width=100, height=60) as h:
+        h.default_timeout = 3
         h.await_text("test mode")
         h.tmux.execute_command('split-window', '-vt0', '-l', 45)
         h.await_text("test mode")
@@ -466,7 +481,7 @@ def test_ct_clock_screen_resize_height_running():
 ])
 def test_ct_clock_screen_start_size(size_width, size_height, expected):
     with Runner(*ct_clock_run("--test_mode"), width=size_width, height=size_height) as h:
-        h.await_text(expected)
+        h.await_text(expected, timeout=3)
 
 
 @pytest.mark.parametrize("size_width, size_height, expected", [
@@ -476,14 +491,16 @@ def test_ct_clock_screen_start_size(size_width, size_height, expected):
 ])
 def test_ct_clock_screen_start_size_to_small(size_width, size_height, expected):
     with Runner("bash", width=size_width, height=size_height) as h:
+        h.default_timeout = 2
         h.await_text("$")
         h.write("python3 ct_clock.py --test_mode")
         h.press("Enter")
-        h.await_text(expected)
+        h.await_text(expected, timeout=3)
 
 
 def test_ct_clock_screen_resize_to_small_width():
     with Runner("bash", width=100, height=60) as h:
+        h.default_timeout = 2
         h.await_text("$")
         h.write("python3 ct_clock.py --test_mode")
         h.press("Enter")
@@ -496,6 +513,7 @@ def test_ct_clock_screen_resize_to_small_width():
 
 def test_ct_clock_screen_resize_to_small_height():
     with Runner("bash", width=100, height=60) as h:
+        h.default_timeout = 2
         h.await_text("$")
         h.write("python3 ct_clock.py --test_mode")
         h.press("Enter")
@@ -508,6 +526,7 @@ def test_ct_clock_screen_resize_to_small_height():
 
 def test_ct_clock_first_digit():
     with Runner(*ct_clock_run("--test_mode", "--test_time", "14:56:38")) as h:
+        h.default_timeout = 2
         h.await_text("test mode")
         sc = h.screenshot()
         assert "2" in sc
