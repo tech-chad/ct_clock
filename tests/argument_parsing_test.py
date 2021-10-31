@@ -90,6 +90,14 @@ def test_argument_parser_test_time(test_value, expected):
 
 
 @pytest.mark.parametrize("test_value, expected", [
+    ([], False), (["--list_commands"], True)
+])
+def test_argument_parser_list_commands(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.list_commands == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
     ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
 ])
 def test_color_type_valid_color(test_value, expected):

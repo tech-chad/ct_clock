@@ -562,3 +562,18 @@ def test_ct_clock_first_digit():
         assert "8" in sc
         assert "0" not in sc
         assert "2" not in sc
+
+
+def test_display_running_commands(capsys):
+    ct_clock.display_running_commands()
+    sc = capsys.readouterr().out
+    assert "Commands available during run time" in sc
+
+
+def test_ct_clock_list_running_commands():
+    with Runner("bash", width=100, height=60) as h:
+        h.default_timeout = 3
+        h.await_text("$")
+        h.write("python3 ct_clock.py --list_commands")
+        h.press("Enter")
+        h.await_text("Commands available during run time")

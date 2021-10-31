@@ -334,6 +334,19 @@ def main_clock(screen, static_color: str, show_seconds: bool,
     screen.refresh()
 
 
+def display_running_commands() -> None:
+    print("Commands available during run time:")
+    print(" q  Q    Quit")
+    print(" c       Change color mode")
+    print(" s       Toggle show seconds")
+    print(" e       Toggle show date")
+    print(" b       Toggle blink colon")
+    print(" m       Toggle military time")
+    print(" 1,2,3   Color cycle timing 1-every second, 2-every minute, 3-every hour")
+    print(" r,t,y,u,i,o,p")
+    print("         Select color: Red, Green, Blue, Yellow, Magenta, Cyan, White")
+
+
 def color_type(value: str) -> str:
     """
     Used with argparse to check if value is a valid color.
@@ -363,6 +376,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Cycle timing (1 every sec, 2 every min, 3 every hour)")
     parser.add_argument("--show_date", action="store_true",
                         help="Show date")
+    parser.add_argument("--list_commands", action="store_true",
+                        help="List commands available during run time.")
     parser.add_argument("--test_mode", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--test_time", type=str, default="00:00:00",
                         help=argparse.SUPPRESS)
@@ -371,6 +386,9 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
+    if args.list_commands:
+        display_running_commands()
+        return 0
     try:
         curses.wrapper(main_clock, args.color, args.no_seconds,
                        args.military_time, args.screensaver,
