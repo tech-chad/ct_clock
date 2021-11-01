@@ -577,3 +577,33 @@ def test_ct_clock_list_running_commands():
         h.write("python3 ct_clock.py --list_commands")
         h.press("Enter")
         h.await_text("Commands available during run time")
+
+
+def test_ct_clock_default_command():
+    with Runner(*ct_clock_run("--test_mode",
+                              "--test_time", "14:00:05",
+                              "-m",
+                              "--show_date",
+                              "-c", "red",
+                              "-b"
+                              )) as h:
+        h.default_timeout = 3
+        h.await_text("test mode")
+        sleep(1)
+        h.write("d")
+        h.press("Enter")
+        sleep(2)
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert "PM" in sc
+        assert "2" in sc
+        assert "4" not in sc
+        assert "/" not in sc
+        assert "white" in sc
+        assert ":" in sc
+
+
+def test_default_key_in_display_running_commands(capsys):
+    ct_clock.display_running_commands()
+    sc = capsys.readouterr().out
+    assert "Reset setting to defaults" in sc

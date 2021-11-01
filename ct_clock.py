@@ -323,6 +323,16 @@ def main_clock(screen, static_color: str, show_seconds: bool,
         elif ch == 101:  # e
             show_date = not show_date  # flips between True and False
             update_screen = True
+        elif ch == 100:  # d
+            time_format = "%I%M%S"
+            military_time = False
+            show_date = False
+            show_seconds = True
+            mode = 0
+            static_color = "white"
+            blink_colon = False
+            colon_on = True
+            update_screen = True
         if ch == 49:  # 1
             cycle_timing = 1
         elif ch == 50:  # 2
@@ -342,6 +352,7 @@ def display_running_commands() -> None:
     print(" e       Toggle show date")
     print(" b       Toggle blink colon")
     print(" m       Toggle military time")
+    print(" d       Reset setting to defaults")
     print(" 1,2,3   Color cycle timing 1-every second, 2-every minute, 3-every hour")
     print(" r,t,y,u,i,o,p")
     print("         Select color: Red, Green, Blue, Yellow, Magenta, Cyan, White")
