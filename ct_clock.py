@@ -223,7 +223,8 @@ def display(screen, time_string: str, size: str,
 def main_clock(screen, static_color: str, show_seconds: bool,
                military_time: bool, screen_saver_mode: bool,
                mode: int, cycle_timing: int, show_date: bool,
-               blink_colon: bool, test_mode: bool, test_time: str) -> None:
+               blink_colon: bool, test_mode: bool, test_time: str,
+               no_colon: bool) -> None:
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     ct_time = MyTime(test_mode, test_time, True)
@@ -240,7 +241,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
 
     time_format = "%H%M%S" if military_time else "%I%M%S"
 
-    colon_on = True
+    colon_on = False if no_colon else True
     cycle_count = 0
     displayed = ct_time.get_time(time_format)
     while True:
@@ -333,6 +334,10 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             blink_colon = False
             colon_on = True
             update_screen = True
+        elif ch == 110:  # n
+            colon_on = not colon_on
+            blink_colon = False
+            update_screen = True
         if ch == 49:  # 1
             cycle_timing = 1
         elif ch == 50:  # 2
@@ -352,6 +357,7 @@ def display_running_commands() -> None:
     print(" e       Toggle show date")
     print(" b       Toggle blink colon")
     print(" m       Toggle military time")
+    print(" n       Toggle colon off and on")
     print(" d       Reset setting to defaults")
     print(" 1,2,3   Color cycle timing 1-every second, 2-every minute, 3-every hour")
     print(" r,t,y,u,i,o,p")
@@ -381,6 +387,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Screen saver mode.  Any key will exit")
     parser.add_argument("-b", "--blink_colon", action="store_true",
                         help="Blinking colon")
+    parser.add_argument("-n", "--no_colon", action="store_true",
+                        help="No colon")
     parser.add_argument("--mode", type=int, choices=[0, 1], default=0,
                         help="Mode: 0-normal, 1-cycle whole")
     parser.add_argument("--cycle_timing", type=int, choices=[1, 2, 3], default=2,
@@ -404,7 +412,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         curses.wrapper(main_clock, args.color, args.no_seconds,
                        args.military_time, args.screensaver,
                        args.mode, args.cycle_timing, args.show_date,
-                       args.blink_colon, args.test_mode, args.test_time)
+                       args.blink_colon, args.test_mode, args.test_time,
+                       args.no_colon)
     except CTClockError as e:
         print(e)
         return 1

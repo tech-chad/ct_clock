@@ -607,3 +607,44 @@ def test_default_key_in_display_running_commands(capsys):
     ct_clock.display_running_commands()
     sc = capsys.readouterr().out
     assert "Reset setting to defaults" in sc
+
+
+def test_ct_clock_no_colon_mode_cli():
+    with Runner(*ct_clock_run("--test_mode", "-n")) as h:
+        h.default_timeout = 3
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert ":" not in sc
+
+
+def test_ct_clock_no_colon_mode_running():
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.default_timeout = 3
+        h.await_text("test mode")
+        h.await_text(":")
+        h.write("n")
+        h.press("Enter")
+        sleep(0.5)
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert ":" not in sc
+        h.write("n")
+        h.press("Enter")
+        h.await_text(":")
+
+
+def test_ct_clock_no_colon_mode_reset_to_default():
+    with Runner(*ct_clock_run("--test_mode", "-n")) as h:
+        h.default_timeout = 3
+        h.await_text("test mode")
+        sc = h.screenshot()
+        assert ":" not in sc
+        h.write("d")
+        h.press("Enter")
+        h.await_text(":")
+
+
+def test_no_colon_in_display_running_commands(capsys):
+    ct_clock.display_running_commands()
+    sc = capsys.readouterr().out
+    assert "Toggle colon off and on" in sc
