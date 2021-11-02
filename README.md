@@ -12,6 +12,8 @@ curses terminal digital clock
 - ```c``` Mode: normal, cycle whole
 - ```b``` Blink colon
 - ```e``` Show Date
+- ```n``` Toggle colon
+- ```d``` Reset settings to default
 - ```123``` Cycle mode timing (1 every sec, 2 every min, 3 every hour)
 - ```rtyuiop``` Color select
 
