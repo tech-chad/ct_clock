@@ -106,6 +106,14 @@ def test_argument_parser_no_colon(test_value, expected):
 
 
 @pytest.mark.parametrize("test_value, expected", [
+    ([], "1970-1-2"), (["--test_date", "1975-5-4"], "1975-5-4"),
+])
+def test_argument_parses_test_date(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.test_date == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
     ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
 ])
 def test_color_type_valid_color(test_value, expected):

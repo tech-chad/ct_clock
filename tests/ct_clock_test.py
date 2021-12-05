@@ -141,6 +141,17 @@ def test_my_time_get_time_test_mode_reset_time():
             assert t.get_time("%I%M%S") == "013002"
 
 
+def test_my_time_test_date():
+    with my_time_context_manager(True, "1970-1-2 07:00:00") as t:
+        assert t.get_date("%d/%m/%Y") == "02/01/1970"
+
+
+def test_my_time_date_no_test():
+    with time_machine.travel("1980-8-21 11:00:00"):
+        t = ct_clock.MyTime(False)
+        assert t.get_date("%d/%m/%Y") == "21/08/1980"
+
+
 @pytest.mark.parametrize("test_key", ["Q", "q"])
 def test_ct_clock_quit(test_key):
     with Runner(*ct_clock_run("--test_mode"), width=50, height=50) as h:
@@ -284,6 +295,15 @@ def test_ct_clock_testing_test_mode_time():
         assert "8" not in sc
         assert "9" not in sc
         assert "0" not in sc
+
+
+def test_ct_clock_testing_test_mode_date():
+    with Runner(*ct_clock_run("--show_date",
+                              "--test_mode",
+                              "--test_date",
+                              "1980-1-2")) as h:
+        h.await_text("test mode", timeout=3)
+        h.await_text("02/01/1980")
 
 
 def test_help_test_mode_test_time_suppressed():
