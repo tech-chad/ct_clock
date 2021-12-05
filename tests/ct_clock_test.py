@@ -668,3 +668,56 @@ def test_no_colon_in_display_running_commands(capsys):
     ct_clock.display_running_commands()
     sc = capsys.readouterr().out
     assert "Toggle colon off and on" in sc
+
+
+def test_ct_clock_date_format_change():
+    with Runner(*ct_clock_run("--test_mode", "--test_date", "2021-12-15")) as h:
+        h.await_text("test mode")
+        h.write("e")
+        h.await_text("15/12/2021")
+        h.write("E")
+        h.await_text("12/15/2021")
+        h.write("E")
+        h.await_text("2021/12/15")
+        h.write("E")
+        h.await_text("2021/15/12")
+        h.write("E")
+        h.await_text("15/12/2021")
+
+
+def test_ct_clock_date_format_no_change_when_show_date_is_false():
+    with Runner(*ct_clock_run("--test_mode", "--test_date", "2021-12-15")) as h:
+        h.await_text("test mode")
+        h.write("E")
+        h.await_text("test mode")
+        h.write("e")
+        h.await_text("15/12/2021")
+
+
+def test_ct_clock_date_format_keep_format():
+    with Runner(*ct_clock_run("--test_mode", "--test_date", "2021-12-15")) as h:
+        h.await_text("test mode")
+        h.write("e")
+        h.await_text("15/12/2021")
+        h.write("E")
+        h.await_text("12/15/2021")
+        h.write("E")
+        h.await_text("2021/12/15")
+        h.write("e")
+        h.await_text("test mode")
+        h.write("e")
+        h.await_text("2021/12/15")
+
+
+def test_ct_clock_reset_date_format_with_d():
+    with Runner(*ct_clock_run("--test_mode", "--test_date", "2021-12-15")) as h:
+        h.await_text("test mode")
+        h.write("e")
+        h.await_text("15/12/2021")
+        h.write("E")
+        h.await_text("12/15/2021")
+        h.write("e")
+        h.write("d")
+        h.write("e")
+        h.await_text("15/12/2021")
+

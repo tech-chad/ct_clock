@@ -18,6 +18,7 @@ CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
 CHAR_CODES_COLOR = {114: "red", 116: "green", 121: "blue", 117: "yellow",
                     105: "magenta", 111: "cyan", 112: "white"}
 COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "white"]
+DATE_FORMATS = ["%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d", "%Y/%d/%m"]
 
 
 class CTClockError(Exception):
@@ -247,6 +248,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
         raise CTClockError("Error screen / window is to small")
 
     time_format = "%H%M%S" if military_time else "%I%M%S"
+    date_format_pointer = 0
 
     colon_on = False if no_colon else True
     cycle_count = 0
@@ -293,7 +295,7 @@ def main_clock(screen, static_color: str, show_seconds: bool,
                 color = COLORS[cycle_count]
             else:
                 color = static_color
-            date = ct_time.get_date("%d/%m/%Y")
+            date = ct_time.get_date(DATE_FORMATS[date_format_pointer])
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on,
                     test_mode, military_time, date)
@@ -332,10 +334,17 @@ def main_clock(screen, static_color: str, show_seconds: bool,
         elif ch == 101:  # e
             show_date = not show_date  # flips between True and False
             update_screen = True
+        elif ch == 69 and show_date:  # E
+            if date_format_pointer == len(DATE_FORMATS) - 1:
+                date_format_pointer = 0
+            else:
+                date_format_pointer += 1
+            update_screen = True
         elif ch == 100:  # d
             time_format = "%I%M%S"
             military_time = False
             show_date = False
+            date_format_pointer = 0
             show_seconds = True
             mode = 0
             static_color = "white"
