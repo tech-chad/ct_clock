@@ -4,6 +4,7 @@ import curses
 import time
 from datetime import datetime
 
+from typing import Generator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -85,25 +86,25 @@ class MyTime:
         else:
             self.time = None
 
-    def _time_generator(self):
+    def _time_generator(self) -> Generator:
         with time_machine.travel(self.test_time, tick=self.tick):
             while True:
                 yield datetime.today()
 
-    def get_time(self, time_format: str):
+    def get_time(self, time_format: str) -> str:
         if self.test_mode:
             return next(self.time).strftime(time_format)
         else:
             return datetime.today().strftime(time_format)
 
-    def get_date(self, date_format: str):
+    def get_date(self, date_format: str) -> str:
         if self.test_mode:
             return next(self.time).date().strftime(date_format)
         else:
             return datetime.today().date().strftime(date_format)
-            # return datetime.today().date().strftime("%d/%m/%Y")
 
-    def reset_time(self):
+    def reset_time(self) -> None:
+        # used in the context manager in the test suite
         if self.test_mode:
             self.time.close()
 
@@ -220,7 +221,6 @@ def display(screen, time_string: str, size: str,
     if am_pm != "":
         screen.addstr(height + hc, w_offset, am_pm, curses.color_pair(2))
     if show_date:
-        # date = datetime.today().date().strftime("%d/%m/%Y")
         screen.addstr(height + hc, w_offset - 15, date, curses.color_pair(2))
     if test_mode:
         screen.addstr(0, 0, "test mode", curses.color_pair(2))
@@ -228,14 +228,18 @@ def display(screen, time_string: str, size: str,
     screen.refresh()
 
 
-def main_clock(screen, static_color: str, show_seconds: bool,
-               military_time: bool, screen_saver_mode: bool,
-               mode: int, cycle_timing: int, show_date: bool,
-               blink_colon: bool, test_mode: bool, test_time: str,
-               no_colon: bool, test_date: str) -> None:
+def main_clock(screen, args: argparse.Namespace) -> None:
+    static_color = args.color
+    show_seconds = args.no_seconds
+    military_time = args.military_time
+    mode = args.mode
+    cycle_timing = args.cycle_timing
+    show_date = args.show_date
+    blink_colon = args.blink_colon
+    no_colon = args.no_colon
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
-    ct_time = MyTime(test_mode, test_date + " " + test_time, True)
+    ct_time = MyTime(args.test_mode, args.test_date + " " + args.test_time, True)
     update_screen = True
     size_y, size_x = screen.getmaxyx()
     if size_x >= 90 and size_y >= 20:
@@ -298,10 +302,10 @@ def main_clock(screen, static_color: str, show_seconds: bool,
             date = ct_time.get_date(DATE_FORMATS[date_format_pointer])
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on,
-                    test_mode, military_time, date)
+                    args.test_mode, military_time, date)
             update_screen = False
         ch = screen.getch()
-        if screen_saver_mode and ch != -1:
+        if args.screensaver and ch != -1:
             break
         if ch in [81, 113]:  # q, Q
             break
@@ -428,11 +432,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         display_running_commands()
         return 0
     try:
-        curses.wrapper(main_clock, args.color, args.no_seconds,
-                       args.military_time, args.screensaver,
-                       args.mode, args.cycle_timing, args.show_date,
-                       args.blink_colon, args.test_mode, args.test_time,
-                       args.no_colon, args.test_date)
+        curses.wrapper(main_clock, args)
     except CTClockError as e:
         print(e)
         return 1
