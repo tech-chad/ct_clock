@@ -394,6 +394,7 @@ def display_running_commands() -> None:
     print(" c       Change color mode")
     print(" s       Toggle show seconds")
     print(" e       Toggle show date")
+    print(" E       Cycle date formats")
     print(" b       Toggle blink colon")
     print(" m       Toggle military time")
     print(" n       Toggle colon off and on")
