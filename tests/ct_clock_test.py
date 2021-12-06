@@ -754,3 +754,17 @@ def test_ct_clock_bg_color_reset_default():
         h.await_text("bg=magenta")
         h.write("d")
         h.await_text("bg=black")
+
+
+def test_ct_clock_digit_color_black_cli():
+    with Runner(*ct_clock_run("--test_mode", "-c", "black", "--bg_color", "white")) as h:
+        h.await_text("test mode")
+        h.await_text("black")
+
+
+def test_ct_clock_digit_color_black_command():
+    with Runner(*ct_clock_run("--test_mode", "--bg_color", "blue")) as h:
+        h.await_text("test mode")
+        h.await_text("white")
+        h.write("[")
+        h.await_text("black")

@@ -17,7 +17,7 @@ CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
                  "blue": curses.COLOR_BLUE, "magenta": curses.COLOR_MAGENTA,
                  "yellow": curses.COLOR_YELLOW, "cyan": curses.COLOR_CYAN}
 CHAR_CODES_COLOR = {114: "red", 116: "green", 121: "blue", 117: "yellow",
-                    105: "magenta", 111: "cyan", 112: "white"}
+                    105: "magenta", 111: "cyan", 112: "white", 91: "black"}
 CHAR_CODES_COLOR_BG = {82: "red", 84: "green", 89: "blue", 85: "yellow",
                        73: "magenta", 79: "cyan", 80: "white", 123: "black"}
 COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "white", "black"]
@@ -399,7 +399,7 @@ def display_running_commands() -> None:
     print(" n       Toggle colon off and on")
     print(" d       Reset setting to defaults")
     print(" 1,2,3   Color cycle timing 1-every second, 2-every minute, 3-every hour")
-    print(" r,t,y,u,i,o,p")
+    print(" r,t,y,u,i,o,p,[")
     print("         Select color: Red, Green, Blue, Yellow, Magenta, Cyan, White")
     print(" R,T,Y,U,I,O,P,{")
     print("         Change background colors: Red, Green, Blue, Yellow, Magenta, "
