@@ -113,6 +113,11 @@ def test_argument_parses_test_date(test_value, expected):
     assert result.test_date == expected
 
 
+def test_argument_parser_bg_color():
+    result = ct_clock.argument_parser(["--bg_color", "blue"])
+    assert result.bg_color == "blue"
+
+
 @pytest.mark.parametrize("test_value, expected", [
     ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
 ])

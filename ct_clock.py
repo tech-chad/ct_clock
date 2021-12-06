@@ -18,7 +18,9 @@ CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
                  "yellow": curses.COLOR_YELLOW, "cyan": curses.COLOR_CYAN}
 CHAR_CODES_COLOR = {114: "red", 116: "green", 121: "blue", 117: "yellow",
                     105: "magenta", 111: "cyan", 112: "white"}
-COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "white"]
+CHAR_CODES_COLOR_BG = {82: "red", 84: "green", 89: "blue", 85: "yellow",
+                       73: "magenta", 79: "cyan", 80: "white", 123: "black"}
+COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "white", "black"]
 DATE_FORMATS = ["%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d", "%Y/%d/%m"]
 
 
@@ -166,24 +168,34 @@ def get_space_size(size: str, show_seconds: bool) -> Tuple[int, int]:
     return h, w
 
 
-def set_color(color: str) -> None:
+def fill_background(screen, bg_color: str) -> None:
+    curses.init_pair(3, CURSES_COLORS[bg_color], CURSES_COLORS[bg_color])
+    height, width = screen.getmaxyx()
+    for y in range(height - 1):
+        for x in range(width):
+            screen.addstr(y, x, " ", curses.color_pair(3))
+
+
+def set_color(color: str, bg_color: str) -> None:
     curses.init_pair(1, CURSES_COLORS[color], CURSES_COLORS[color])
-    curses.init_pair(2, CURSES_COLORS[color], curses.COLOR_BLACK)
+    curses.init_pair(2, CURSES_COLORS[color], CURSES_COLORS[bg_color])
 
 
 def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
             show_seconds: bool, am_pm: str, show_date: bool,
-            colon_on: bool, test_mode: bool, military_time: bool, date: str) -> None:
+            colon_on: bool, test_mode: bool, military_time: bool, date: str,
+            bg_color: str) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
-    set_color(color)
+    set_color(color, bg_color)
     size_offset = get_offset(size)
     height, width = get_space_size(size, show_seconds)
     hc = int((size_y - height) / 2)  # height/vertical center
     w_offset = int((size_x - width) / 2)  # width/horizontal center
     screen.clear()
+    fill_background(screen, bg_color)
     if military_time or time_string[:1] == "1":
         d = "1" if not test_mode else time_string[:1]
         for seg in time_segments[0]:
@@ -225,6 +237,7 @@ def display(screen, time_string: str, size: str,
     if test_mode:
         screen.addstr(0, 0, "test mode", curses.color_pair(2))
         screen.addstr(1, 0, color, curses.color_pair(2))
+        screen.addstr(2, 0, f"bg={bg_color}", curses.color_pair(2))
     screen.refresh()
 
 
@@ -237,6 +250,7 @@ def main_clock(screen, args: argparse.Namespace) -> None:
     show_date = args.show_date
     blink_colon = args.blink_colon
     no_colon = args.no_colon
+    bg_color = args.bg_color
     curses.curs_set(0)  # Set the cursor to off.
     screen.timeout(0)  # Turn blocking off for screen.getch()
     ct_time = MyTime(args.test_mode, args.test_date + " " + args.test_time, True)
@@ -302,7 +316,7 @@ def main_clock(screen, args: argparse.Namespace) -> None:
             date = ct_time.get_date(DATE_FORMATS[date_format_pointer])
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on,
-                    args.test_mode, military_time, date)
+                    args.test_mode, military_time, date, bg_color)
             update_screen = False
         ch = screen.getch()
         if args.screensaver and ch != -1:
@@ -311,6 +325,9 @@ def main_clock(screen, args: argparse.Namespace) -> None:
             break
         if mode == 0 and ch in CHAR_CODES_COLOR.keys():
             static_color = CHAR_CODES_COLOR[ch]
+            update_screen = True
+        if ch in CHAR_CODES_COLOR_BG.keys():
+            bg_color = CHAR_CODES_COLOR_BG[ch]
             update_screen = True
         if ch == 99:  # c
             if mode == 1:
@@ -354,6 +371,7 @@ def main_clock(screen, args: argparse.Namespace) -> None:
             static_color = "white"
             blink_colon = False
             colon_on = True
+            bg_color = "black"
             update_screen = True
         elif ch == 110:  # n
             colon_on = not colon_on
@@ -383,6 +401,9 @@ def display_running_commands() -> None:
     print(" 1,2,3   Color cycle timing 1-every second, 2-every minute, 3-every hour")
     print(" r,t,y,u,i,o,p")
     print("         Select color: Red, Green, Blue, Yellow, Magenta, Cyan, White")
+    print(" R,T,Y,U,I,O,P,{")
+    print("         Change background colors: Red, Green, Blue, Yellow, Magenta, "
+          "Cyan, White, Black")
 
 
 def color_type(value: str) -> str:
@@ -416,6 +437,8 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Cycle timing (1 every sec, 2 every min, 3 every hour)")
     parser.add_argument("--show_date", action="store_true",
                         help="Show date")
+    parser.add_argument("--bg_color", type=color_type, default="black",
+                        help="Back ground color")
     parser.add_argument("--list_commands", action="store_true",
                         help="List commands available during run time.")
     parser.add_argument("--test_mode", action="store_true", help=argparse.SUPPRESS)

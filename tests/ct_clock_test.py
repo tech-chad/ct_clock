@@ -721,3 +721,36 @@ def test_ct_clock_reset_date_format_with_d():
         h.write("e")
         h.await_text("15/12/2021")
 
+
+def test_ct_clock_bg_color_default():
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.await_text("test mode")
+        h.await_text("bg=black")
+
+
+def test_ct_clock_bg_color_cli_color():
+    with Runner(*ct_clock_run("--test_mode", "--bg_color", "green")) as h:
+        h.await_text("test mode")
+        h.await_text("bg=green")
+
+
+def test_ct_clock_bg_color_change():
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.await_text("test mode")
+        h.await_text("bg=black")
+        h.press("R")
+        h.await_text("bg=red")
+        h.press("T")
+        h.await_text("bg=green")
+        h.press("O")
+        h.await_text("bg=cyan")
+
+
+def test_ct_clock_bg_color_reset_default():
+    with Runner(*ct_clock_run("--test_mode")) as h:
+        h.await_text("test mode")
+        h.await_text("bg=black")
+        h.write("I")
+        h.await_text("bg=magenta")
+        h.write("d")
+        h.await_text("bg=black")
