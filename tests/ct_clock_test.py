@@ -152,6 +152,18 @@ def test_my_time_date_no_test():
         assert t.get_date("%d/%m/%Y") == "21/08/1980"
 
 
+def test_my_time_pause():
+    with my_time_context_manager(True, "00:00:00", True) as t:
+        assert t.get_time("%H%M%S") == "000000"
+        sleep(2)
+        assert t.get_time("%H%M%S") == "000002"
+        t.pause()
+        sleep(1)
+        t.unpause()
+        t.get_time("%H%M%S")
+        assert t.get_time("%H%M%S") == "000002"
+
+
 @pytest.mark.parametrize("test_key", ["Q", "q"])
 def test_ct_clock_quit(test_key):
     with Runner(*ct_clock_run("--test_mode"), width=50, height=50) as h:
@@ -768,3 +780,72 @@ def test_ct_clock_digit_color_black_command():
         h.await_text("white")
         h.write("[")
         h.await_text("black")
+
+
+def test_ct_clock_stopwatch_digits():
+    with Runner(*ct_clock_run("stop_watch")) as h:
+        h.await_text("1")
+        h.await_text("2")
+        h.await_text("3")
+        h.await_text("4")
+        h.await_text("5")
+        h.await_text("6")
+
+
+def test_ct_clock_stopwatch_test_mode():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.await_text("test mode")
+
+
+def test_ct_clock_stopwatch_printed():
+    with Runner(*ct_clock_run("stop_watch")) as h:
+        h.await_text("Stop Watch")
+
+
+@pytest.mark.parametrize("key", ["q", "Q"])
+def test_ct_clock_stopwatch_quit(key):
+    with Runner(*ct_clock_run("stop_watch")) as h:
+        h.await_text("Stop Watch")
+        h.press(key)
+        h.await_exit()
+
+
+def test_ct_clock_stopwatch_start_at_zero():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.await_text("Stop Watch")
+        h.await_text("0")
+        sc = h.screenshot()
+        assert "1" not in sc
+        assert "2" not in sc
+        assert "3" not in sc
+        assert "9" not in sc
+
+
+def test_ct_clock_stopwatch_pause():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.default_timeout = 2
+        h.await_text("Stop Watch")
+        h.press("g")
+        sc = h.screenshot()
+        assert "0" in sc
+        assert "1" not in sc
+        assert "2" not in sc
+        assert "3" not in sc
+        assert "9" not in sc
+        sleep(1)
+        sc1 = h.screenshot()
+        assert sc == sc1
+
+
+def test_ct_clock_stopwatch_pause_unpause():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.default_timeout = 3
+        h.await_text("Stop Watch")
+        h.press("g")
+        sc = h.screenshot()
+        sleep(1)
+        sc1 = h.screenshot()
+        assert sc == sc1
+        sleep(1)
+        h.press("g")
+        h.await_text("1")

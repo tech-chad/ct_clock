@@ -83,6 +83,7 @@ class MyTime:
         self.test_mode = test_mode
         self.test_time = test_time
         self.tick = tick
+        self.save_time = ""
         if test_mode:
             self.time = self._time_generator()
         else:
@@ -109,6 +110,14 @@ class MyTime:
         # used in the context manager in the test suite
         if self.test_mode:
             self.time.close()
+
+    def pause(self):
+        self.save_time = next(self.time).time().strftime("%H:%M:%S.%f")
+        self.time.close()
+
+    def unpause(self):
+        self.test_time = self.save_time
+        self.time = self._time_generator()
 
 
 def get_segments(number: str, size: str) -> tuple:
@@ -185,7 +194,7 @@ def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
             show_seconds: bool, am_pm: str, show_date: bool,
             colon_on: bool, test_mode: bool, military_time: bool, date: str,
-            bg_color: str) -> None:
+            bg_color: str, stop_watch: bool) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -196,6 +205,8 @@ def display(screen, time_string: str, size: str,
     w_offset = int((size_x - width) / 2)  # width/horizontal center
     screen.clear()
     fill_background(screen, bg_color)
+    if stop_watch:
+        screen.addstr(hc - 2, int(size_x / 2) - 5, "Stop Watch", curses.color_pair(2))
     if military_time or time_string[:1] == "1":
         d = "1" if not test_mode else time_string[:1]
         for seg in time_segments[0]:
@@ -239,6 +250,54 @@ def display(screen, time_string: str, size: str,
         screen.addstr(1, 0, color, curses.color_pair(2))
         screen.addstr(2, 0, f"bg={bg_color}", curses.color_pair(2))
     screen.refresh()
+
+
+def main_stopwatch(screen, args: argparse.Namespace) -> None:
+    curses.curs_set(0)  # Set the cursor to off.
+    screen.timeout(0)  # Turn blocking off for screen.getch()
+    bg_color = args.bg_color
+    digit_color = args.color
+
+    size_y, size_x = screen.getmaxyx()
+    if size_x >= 90 and size_y >= 20:
+        text_size = "large"
+    elif size_x >= 46 and size_y >= 10:
+        text_size = "medium"
+    elif size_x >= 36 and size_y >= 8:
+        text_size = "small"
+    else:
+        raise CTClockError("Error screen / window is to small")
+    update_screen = True
+    ct_clock = MyTime(True, "00:00:00", True)
+    display_time = ct_clock.get_time("%H%M%S")
+    paused = False
+    while True:
+        if curses.is_term_resized(size_y, size_x):
+            size_y, size_x = screen.getmaxyx()
+            update_screen = True
+            if size_x >= 90 and size_y >= 20:
+                text_size = "large"
+            elif size_x >= 46 and size_y >= 10:
+                text_size = "medium"
+            elif size_x >= 36 and size_y >= 8:
+                text_size = "small"
+            else:
+                raise CTClockError("Error screen / window is to small")
+        if not paused and display_time != ct_clock.get_time("%H%M%S") or update_screen:
+            display_time = ct_clock.get_time("%H%M%S")
+            display(screen, display_time, text_size, size_x, size_y, digit_color, True,
+                    "", False, True, args.test_mode, True, "", bg_color, True)
+            update_screen = False
+        ch = screen.getch()
+        if ch in [81, 113]:  # q, Q
+            break
+        elif ch == 103:  # g
+            if paused:
+                ct_clock.unpause()
+                paused = False
+            else:
+                ct_clock.pause()
+                paused = True
 
 
 def main_clock(screen, args: argparse.Namespace) -> None:
@@ -316,7 +375,7 @@ def main_clock(screen, args: argparse.Namespace) -> None:
             date = ct_time.get_date(DATE_FORMATS[date_format_pointer])
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on,
-                    args.test_mode, military_time, date, bg_color)
+                    args.test_mode, military_time, date, bg_color, False)
             update_screen = False
         ch = screen.getch()
         if args.screensaver and ch != -1:
@@ -447,6 +506,9 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help=argparse.SUPPRESS)
     parser.add_argument("--test_date", type=str, default="1970-1-2",
                         help=argparse.SUPPRESS)
+
+    sub_parser = parser.add_subparsers(dest="command")
+    stop_watch_parser = sub_parser.add_parser("stop_watch")
     return parser.parse_args(argv)
 
 
@@ -454,6 +516,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = argument_parser(argv)
     if args.list_commands:
         display_running_commands()
+        return 0
+    elif args.command == "stop_watch":
+        curses.wrapper(main_stopwatch, args)
         return 0
     try:
         curses.wrapper(main_clock, args)

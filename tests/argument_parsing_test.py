@@ -119,6 +119,14 @@ def test_argument_parser_bg_color():
 
 
 @pytest.mark.parametrize("test_value, expected", [
+    ([], None), (["stop_watch"], "stop_watch")
+])
+def test_argument_parser_sub_parser_stopwatch_command(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.command == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
     ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
 ])
 def test_color_type_valid_color(test_value, expected):
