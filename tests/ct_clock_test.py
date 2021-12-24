@@ -1,4 +1,3 @@
-import datetime
 import types
 import contextlib
 
@@ -161,6 +160,25 @@ def test_my_time_pause():
         sleep(1)
         t.unpause()
         t.get_time("%H%M%S")
+        assert t.get_time("%H%M%S") == "000002"
+
+
+def test_my_time_reset():
+    with my_time_context_manager(True, "00:00:00", True) as t:
+        assert t.get_time("%H%M%S") == "000000"
+        sleep(2)
+        assert t.get_time("%H%M%S") == "000002"
+        t.reset()
+        assert t.get_time("%H%M%S") == "000000"
+
+
+def test_my_time_get_time_paused():
+    with my_time_context_manager(True, "00:00:00", True) as t:
+        assert t.get_time("%H%M%S") == "000000"
+        sleep(2)
+        assert t.get_time("%H%M%S") == "000002"
+        t.pause()
+        sleep(1)
         assert t.get_time("%H%M%S") == "000002"
 
 
@@ -506,6 +524,44 @@ def test_ct_clock_screen_resize_height_running():
         h.await_text("test mode")
 
 
+def test_ct_clock_screen_resize_stop_watch():
+    with Runner(*ct_clock_run("stop_watch"), width=100, height=60) as h:
+        h.await_text("Stop Watch  Stopped")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.tmux.execute_command('split-window', '-vt0', '-l', 39)  # height 21
+        h.await_text("Stop Watch  Running")
+        h.tmux.execute_command('resize-pane', '-U', 5)  # height 11
+        h.await_text("Stop Watch  Running")
+        h.tmux.execute_command('resize-pane', '-U', 1)  # height 10
+        h.await_text("Stop Watch  Running")
+
+
+def test_ct_clock_stop_watch_no_crash_on_screen_size_to_small():
+    with Runner("bash", width=100, height=8) as h:
+        h.await_text("$")
+        h.write("python3 ct_clock.py stop_watch")
+        h.press("Enter")
+        h.await_text("Error screen / window is to small")
+        sc = h.screenshot()
+        assert "raise CTClockError" not in sc
+
+
+def test_ct_clock_stop_watch_same_on_resize():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch"),  width=100, height=60) as h:
+        h.await_text("Stop Watch  Stopped")
+        sc = h.screenshot()
+        assert "0" in sc
+        sleep(2)
+        h.tmux.execute_command('split-window', '-vt0', '-l', 39)  # height 21
+        h.await_text("Stop Watch  Stopped")
+        sc = h.screenshot()
+        assert "0" in sc
+        assert "1" not in sc
+        assert "2" not in sc
+        assert "3" not in sc
+
+
 @pytest.mark.parametrize("size_width, size_height, expected", [
     (100, 100, "test mode"), (50, 100, "test mode"), (37, 100, "test mode"),
     (36, 100, "test mode"), (100, 50, "test mode"), (100, 9, "test mode"),
@@ -607,6 +663,15 @@ def test_ct_clock_list_running_commands():
         h.default_timeout = 3
         h.await_text("$")
         h.write("python3 ct_clock.py --list_commands")
+        h.press("Enter")
+        h.await_text("Commands available during run time")
+
+
+def test_ct_clock_list_running_commands_stop_watch():
+    with Runner("bash", width=100, height=100) as h:
+        h.default_timeout = 3
+        h.await_text("$")
+        h.write("python3 ct_clock.py stop_watch --list_commands")
         h.press("Enter")
         h.await_text("Commands available during run time")
 
@@ -799,13 +864,13 @@ def test_ct_clock_stopwatch_test_mode():
 
 def test_ct_clock_stopwatch_printed():
     with Runner(*ct_clock_run("stop_watch")) as h:
-        h.await_text("Stop Watch")
+        h.await_text("Stop Watch  Stopped")
 
 
 @pytest.mark.parametrize("key", ["q", "Q"])
 def test_ct_clock_stopwatch_quit(key):
     with Runner(*ct_clock_run("stop_watch")) as h:
-        h.await_text("Stop Watch")
+        h.await_text("Stop Watch  Stopped")
         h.press(key)
         h.await_exit()
 
@@ -824,8 +889,11 @@ def test_ct_clock_stopwatch_start_at_zero():
 def test_ct_clock_stopwatch_pause():
     with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
         h.default_timeout = 2
-        h.await_text("Stop Watch")
+        h.await_text("Stop Watch  Stopped")
         h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.press("g")
+        h.await_text("Stop Watch  Paused")
         sc = h.screenshot()
         assert "0" in sc
         assert "1" not in sc
@@ -840,12 +908,112 @@ def test_ct_clock_stopwatch_pause():
 def test_ct_clock_stopwatch_pause_unpause():
     with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
         h.default_timeout = 3
-        h.await_text("Stop Watch")
+        h.await_text("Stop Watch  Stopped")
         h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.press("g")
+        h.await_text("Stop Watch  Paused")
         sc = h.screenshot()
         sleep(1)
         sc1 = h.screenshot()
         assert sc == sc1
         sleep(1)
         h.press("g")
+        h.await_text("Stop Watch  Running")
         h.await_text("1")
+
+
+def test_ct_clock_stopwatch_reset_running():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.default_timeout = 3
+        h.await_text("Stop Watch  Stopped")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        sleep(2)
+        sc = h.screenshot()
+        assert "2" in sc
+        h.press("h")
+        h.await_text("Stop Watch  Stopped")
+        sc = h.screenshot()
+        assert "0" in sc
+        assert "1" not in sc
+        assert "2" not in sc
+        assert "3" not in sc
+
+
+def test_ct_clock_stopwatch_reset_paused():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.default_timeout = 3
+        h.await_text("Stop Watch  Stopped")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        sleep(2)
+        sc = h.screenshot()
+        assert "2" in sc
+        h.press("g")
+        h.await_text("Stop Watch  Paused")
+        sc = h.screenshot()
+        assert "2" in sc
+        h.press("h")
+        h.await_text("Stop Watch  Stopped")
+        sc = h.screenshot()
+        assert "0" in sc
+        assert "2" not in sc
+
+
+def test_ct_clock_stopwatch_display_state():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.default_timeout = 2
+        h.await_text("Stop Watch  Stopped")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.press("g")
+        h.await_text("Stop Watch  Paused")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.press("h")
+        h.await_text("Stop Watch  Stopped")
+        h.press("g")
+        h.await_text("Stop Watch  Running")
+        h.press("g")
+        h.await_text("Stop Watch  Paused")
+        h.press("h")
+        h.default_timeout = 2
+        h.await_text("Stop Watch  Stopped")
+
+
+def test_ct_clock_stopwatch_auto_start():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch", "--auto_start")) as h:
+        h.await_text("Stop Watch  Running")
+
+
+def test_ct_clock_stopwatch_default_color():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.await_text("Stop Watch  Stopped")
+        h.await_text("white")
+
+
+def test_ct_clock_stopwatch_color_change_stopped():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.await_text("Stop Watch  Stopped")
+        h.press("r")
+        h.await_text("red")
+
+
+def test_ct_clock_stopwatch_color_change_stopped_no_time_change():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch")) as h:
+        h.await_text("Stop Watch  Stopped")
+        h.await_text("0")
+        sleep(2)
+        h.press("t")
+        h.await_text("green")
+        sc = h.screenshot()
+        assert "1" not in sc
+        assert "2" not in sc
+        assert "3" not in sc
+
+
+def test_ct_clock_stopwatch_cli_color():
+    with Runner(*ct_clock_run("--test_mode", "stop_watch", "-c", "yellow")) as h:
+        h.await_text("Stop Watch  Stopped")
+        h.await_text("yellow")

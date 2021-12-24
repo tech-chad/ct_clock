@@ -1,7 +1,6 @@
 """ Curses terminal digital clock"""
 import argparse
 import curses
-import time
 from datetime import datetime
 
 from typing import Generator
@@ -11,7 +10,6 @@ from typing import Tuple
 
 import time_machine
 
-# might not need color black
 CURSES_COLORS = {"black": curses.COLOR_BLACK, "white": curses.COLOR_WHITE,
                  "red": curses.COLOR_RED, "green": curses.COLOR_GREEN,
                  "blue": curses.COLOR_BLUE, "magenta": curses.COLOR_MAGENTA,
@@ -83,7 +81,8 @@ class MyTime:
         self.test_mode = test_mode
         self.test_time = test_time
         self.tick = tick
-        self.save_time = ""
+        self.save_time = "00:00:00"
+        self.paused = False
         if test_mode:
             self.time = self._time_generator()
         else:
@@ -96,6 +95,8 @@ class MyTime:
 
     def get_time(self, time_format: str) -> str:
         if self.test_mode:
+            if self.paused:
+                return "".join(self.save_time[0:8].split(":"))
             return next(self.time).strftime(time_format)
         else:
             return datetime.today().strftime(time_format)
@@ -114,10 +115,18 @@ class MyTime:
     def pause(self):
         self.save_time = next(self.time).time().strftime("%H:%M:%S.%f")
         self.time.close()
+        self.paused = True
 
     def unpause(self):
         self.test_time = self.save_time
         self.time = self._time_generator()
+        self.paused = False
+
+    def reset(self):
+        self.time.close()
+        self.save_time = self.test_time = "00:00:00"
+        self.time = self._time_generator()
+        self.paused = True
 
 
 def get_segments(number: str, size: str) -> tuple:
@@ -194,7 +203,7 @@ def display(screen, time_string: str, size: str,
             size_x: int, size_y: int, color: str,
             show_seconds: bool, am_pm: str, show_date: bool,
             colon_on: bool, test_mode: bool, military_time: bool, date: str,
-            bg_color: str, stop_watch: bool) -> None:
+            bg_color: str, stop_watch: bool, stop_watch_state: str) -> None:
     time_segments = []
     for digit in time_string:
         time_segments.append(get_segments(digit, size))
@@ -206,7 +215,8 @@ def display(screen, time_string: str, size: str,
     screen.clear()
     fill_background(screen, bg_color)
     if stop_watch:
-        screen.addstr(hc - 2, int(size_x / 2) - 5, "Stop Watch", curses.color_pair(2))
+        msg = f"Stop Watch  {stop_watch_state}"
+        screen.addstr(hc - 2, int(size_x / 2) - 10, msg, curses.color_pair(2))
     if military_time or time_string[:1] == "1":
         d = "1" if not test_mode else time_string[:1]
         for seg in time_segments[0]:
@@ -257,36 +267,41 @@ def main_stopwatch(screen, args: argparse.Namespace) -> None:
     screen.timeout(0)  # Turn blocking off for screen.getch()
     bg_color = args.bg_color
     digit_color = args.color
-
+    if args.auto_start:
+        state = "Running"
+        paused = False
+    else:
+        state = "Stopped"  # running, stopped, paused
+        paused = True
     size_y, size_x = screen.getmaxyx()
-    if size_x >= 90 and size_y >= 20:
+    if size_x >= 90 and size_y >= 22:
         text_size = "large"
     elif size_x >= 46 and size_y >= 10:
         text_size = "medium"
-    elif size_x >= 36 and size_y >= 8:
+    elif size_x >= 36 and size_y >= 9:
         text_size = "small"
     else:
         raise CTClockError("Error screen / window is to small")
     update_screen = True
     ct_clock = MyTime(True, "00:00:00", True)
     display_time = ct_clock.get_time("%H%M%S")
-    paused = False
     while True:
         if curses.is_term_resized(size_y, size_x):
             size_y, size_x = screen.getmaxyx()
-            update_screen = True
-            if size_x >= 90 and size_y >= 20:
+            if size_x >= 90 and size_y >= 22:
                 text_size = "large"
-            elif size_x >= 46 and size_y >= 10:
+            elif size_x >= 46 and size_y >= 12:
                 text_size = "medium"
-            elif size_x >= 36 and size_y >= 8:
+            elif size_x >= 36 and size_y >= 9:
                 text_size = "small"
             else:
                 raise CTClockError("Error screen / window is to small")
-        if not paused and display_time != ct_clock.get_time("%H%M%S") or update_screen:
+            display(screen, display_time, text_size, size_x, size_y, digit_color, True,
+                    "", False, True, args.test_mode, True, "", bg_color, True, state)
+        if update_screen or not paused and display_time != ct_clock.get_time("%H%M%S"):
             display_time = ct_clock.get_time("%H%M%S")
             display(screen, display_time, text_size, size_x, size_y, digit_color, True,
-                    "", False, True, args.test_mode, True, "", bg_color, True)
+                    "", False, True, args.test_mode, True, "", bg_color, True, state)
             update_screen = False
         ch = screen.getch()
         if ch in [81, 113]:  # q, Q
@@ -295,9 +310,23 @@ def main_stopwatch(screen, args: argparse.Namespace) -> None:
             if paused:
                 ct_clock.unpause()
                 paused = False
+                state = "Running"
+                update_screen = True
             else:
                 ct_clock.pause()
                 paused = True
+                state = "Paused"
+                update_screen = True
+        elif ch == 104:  # h
+            update_screen = True
+            paused = True
+            state = "Stopped"
+            display_time = ct_clock.get_time("%H%M%S")
+            ct_clock.reset()
+        if ch in CHAR_CODES_COLOR.keys():
+            digit_color = CHAR_CODES_COLOR[ch]
+            display(screen, display_time, text_size, size_x, size_y, digit_color, True,
+                    "", False, True, args.test_mode, True, "", bg_color, True, state)
 
 
 def main_clock(screen, args: argparse.Namespace) -> None:
@@ -375,7 +404,7 @@ def main_clock(screen, args: argparse.Namespace) -> None:
             date = ct_time.get_date(DATE_FORMATS[date_format_pointer])
             display(screen, displayed, text_size, size_x, size_y,
                     color, show_seconds, am_pm, show_date, colon_on,
-                    args.test_mode, military_time, date, bg_color, False)
+                    args.test_mode, military_time, date, bg_color, False, "")
             update_screen = False
         ch = screen.getch()
         if args.screensaver and ch != -1:
@@ -464,6 +493,14 @@ def display_running_commands() -> None:
     print(" R,T,Y,U,I,O,P,{")
     print("         Change background colors: Red, Green, Blue, Yellow, Magenta, "
           "Cyan, White, Black")
+    print()
+    print()
+    print("STOP WATCH Commands:")
+    print(" q  Q    Quit")
+    print(" g       Start or pause stop watch")
+    print(" h       Reset stop watch to 00:00:00")
+    print(" r,t,y,u,i,o,p,[")
+    print("         Select color: Red, Green, Blue, Yellow, Magenta, Cyan, White")
 
 
 def color_type(value: str) -> str:
@@ -509,6 +546,12 @@ def argument_parser(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
     sub_parser = parser.add_subparsers(dest="command")
     stop_watch_parser = sub_parser.add_parser("stop_watch")
+    stop_watch_parser.add_argument("--auto_start", action="store_true",
+                                   help="Auto start stop watch")
+    stop_watch_parser.add_argument("-c", "--color", type=color_type, default="white",
+                                   help="digit color")
+    stop_watch_parser.add_argument("--list_commands", action="store_true",
+                                   help="List commands available during run time.")
     return parser.parse_args(argv)
 
 
@@ -518,7 +561,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         display_running_commands()
         return 0
     elif args.command == "stop_watch":
-        curses.wrapper(main_stopwatch, args)
+        try:
+            curses.wrapper(main_stopwatch, args)
+        except CTClockError as e:
+            print(e)
+            return 1
         return 0
     try:
         curses.wrapper(main_clock, args)

@@ -127,6 +127,32 @@ def test_argument_parser_sub_parser_stopwatch_command(test_value, expected):
 
 
 @pytest.mark.parametrize("test_value, expected", [
+    (["stop_watch"], False), (["stop_watch", "--auto_start"], True)
+])
+def test_argument_parser_sub_parser_stopwatch_auto_start(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.auto_start == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
+    (["stop_watch", "-c", "cyan"], "cyan"),
+    (["stop_watch", "--color", "blue"], "blue")
+])
+def test_argument_parser_sub_parser_stopwatch_color(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.color == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
+    (["stop_watch", "--list_commands"], True),
+    (["stop_watch"], False)
+])
+def test_argument_parser_sub_parser_list_commands(test_value, expected):
+    result = ct_clock.argument_parser(test_value)
+    assert result.list_commands == expected
+
+
+@pytest.mark.parametrize("test_value, expected", [
     ("blue", "blue"), ("Yellow", "yellow"), ("GREEN", "green")
 ])
 def test_color_type_valid_color(test_value, expected):
